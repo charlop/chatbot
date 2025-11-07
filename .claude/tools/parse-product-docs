@@ -1,0 +1,696 @@
+#!/usr/bin/env python3
+"""
+parse-product-docs - Extract structured requirements from product documentation
+Part of the lightspeed:PIPELINE toolchain
+
+Usage:
+  parse-product-docs <input_dir> [options]
+
+Options:
+  --extract-mvp-features     Extract MVP feature list
+  --extract-user-flows      Extract user journeys and flows
+  --extract-data-models     Extract data schemas and models
+  --priority <level>        Priority filter (mvp-only, all)
+  --output <file>           Output markdown file
+  --verbose                 Verbose output
+
+Examples:
+  parse-product-docs "product-docs/" \
+    --extract-mvp-features \
+    --extract-user-flows \
+    --extract-data-models \
+    --priority "mvp-only" \
+    --output "artifacts/Explore/MVP_REQUIREMENTS.md"
+"""
+
+import argparse
+import re
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Set, Any, Optional
+import json
+
+class ProductDocsParser:
+    def __init__(self, verbose=False):
+        self.verbose = verbose
+        self.requirements = {
+            'mvp_features': [],
+            'user_flows': [],
+            'data_models': [],
+            'api_endpoints': [],
+            'business_rules': [],
+            'constraints': [],
+            'success_criteria': []
+        }
+
+    def log(self, message: str):
+        """Log message if verbose mode is enabled"""
+        if self.verbose:
+            print(f"[PARSER] {message}")
+
+    def parse_directory(self, input_dir: str, options: Dict[str, Any]) -> Dict[str, Any]:
+        """Parse all documentation files in the directory"""
+        input_path = Path(input_dir)
+        if not input_path.exists():
+            raise FileNotFoundError(f"Input directory not found: {input_dir}")
+
+        self.log(f"Parsing product docs in: {input_dir}")
+
+        # Find all documentation files
+        doc_files = []
+        for ext in ['*.md', '*.txt', '*.rst']:
+            doc_files.extend(input_path.glob(ext))
+            doc_files.extend(input_path.glob(f"**/{ext}"))
+
+        if not doc_files:
+            self.log("No documentation files found")
+            return self.requirements
+
+        self.log(f"Found {len(doc_files)} documentation files")
+
+        # Parse each file
+        for file_path in doc_files:
+            self.log(f"Parsing: {file_path.name}")
+            self._parse_file(file_path, options)
+
+        # Filter by priority if specified
+        if options.get('priority') == 'mvp-only':
+            self._filter_mvp_only()
+
+        return self.requirements
+
+    def _parse_file(self, file_path: Path, options: Dict[str, Any]):
+        """Parse a single documentation file"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Extract different types of requirements
+            if options.get('extract_mvp_features'):
+                self._extract_mvp_features(content, file_path.name)
+
+            if options.get('extract_user_flows'):
+                self._extract_user_flows(content, file_path.name)
+
+            if options.get('extract_data_models'):
+                self._extract_data_models(content, file_path.name)
+
+            # Always extract supporting information
+            self._extract_api_endpoints(content, file_path.name)
+            self._extract_business_rules(content, file_path.name)
+            self._extract_constraints(content, file_path.name)
+            self._extract_success_criteria(content, file_path.name)
+
+        except Exception as e:
+            self.log(f"Error parsing {file_path}: {e}")
+
+    def _extract_mvp_features(self, content: str, filename: str):
+        """Extract MVP features from documentation"""
+        features = []
+
+        # Look for MVP sections
+        mvp_sections = re.findall(
+            r'(?i)(?:mvp|minimum viable product|core features?|phase 1).*?(?=\n#{1,3}|\n\n|\Z)',
+            content,
+            re.DOTALL
+        )
+
+        for section in mvp_sections:
+            # Find bullet points or numbered lists
+            feature_matches = re.findall(
+                r'(?:^|\n)[•\-\*]\s*(.+?)(?=\n[•\-\*]|\n\n|\Z)',
+                section,
+                re.MULTILINE | re.DOTALL
+            )
+
+            for match in feature_matches:
+                feature_text = match.strip()
+                if len(feature_text) > 10:  # Filter out very short items
+                    features.append({
+                        'title': self._extract_feature_title(feature_text),
+                        'description': feature_text,
+                        'source_file': filename,
+                        'priority': 'high' if any(word in feature_text.lower()
+                                                for word in ['critical', 'essential', 'must', 'required']) else 'medium'
+                    })
+
+        # Look for functional requirements (FR-)
+        fr_matches = re.findall(
+            r'(?:FR-\w+-\d+|#### FR-\w+-\d+).*?(?=\n####|\n###|\n##|\Z)',
+            content,
+            re.DOTALL
+        )
+
+        for match in fr_matches:
+            title_match = re.search(r'(?:FR-\w+-\d+):\s*(.+?)(?=\n|$)', match)
+            if title_match:
+                features.append({
+                    'title': title_match.group(1).strip(),
+                    'description': match.strip(),
+                    'source_file': filename,
+                    'type': 'functional_requirement',
+                    'priority': 'high'
+                })
+
+        self.requirements['mvp_features'].extend(features)
+
+    def _extract_user_flows(self, content: str, filename: str):
+        """Extract user flows and journeys"""
+        flows = []
+
+        # Look for user flow sections
+        flow_sections = re.findall(
+            r'(?i)(?:user flow|user journey|use case|workflow).*?(?=\n#{1,3}|\n\n|\Z)',
+            content,
+            re.DOTALL
+        )
+
+        for section in flow_sections:
+            # Find step-by-step flows
+            step_matches = re.findall(
+                r'(?:^|\n)\d+\.\s*(.+?)(?=\n\d+\.|\n\n|\Z)',
+                section,
+                re.MULTILINE | re.DOTALL
+            )
+
+            if step_matches:
+                flows.append({
+                    'title': self._extract_section_title(section),
+                    'steps': [step.strip() for step in step_matches],
+                    'source_file': filename,
+                    'type': 'user_flow'
+                })
+
+        # Look for use case patterns
+        uc_matches = re.findall(
+            r'(?:UC\d+|#### UC\d+).*?(?=\n####|\n###|\n##|\Z)',
+            content,
+            re.DOTALL
+        )
+
+        for match in uc_matches:
+            title_match = re.search(r'(?:UC\d+):\s*(.+?)(?=\n|$)', match)
+
+            # Extract flow steps
+            flow_match = re.search(r'(?i)\*\*flow\*\*:?\s*(.*?)(?=\*\*|$)', match, re.DOTALL)
+            steps = []
+            if flow_match:
+                step_text = flow_match.group(1)
+                steps = re.findall(r'\d+\.\s*(.+?)(?=\n\d+\.|\n|\Z)', step_text)
+
+            if title_match:
+                flows.append({
+                    'title': title_match.group(1).strip(),
+                    'description': match.strip(),
+                    'steps': steps,
+                    'source_file': filename,
+                    'type': 'use_case'
+                })
+
+        self.requirements['user_flows'].extend(flows)
+
+    def _extract_data_models(self, content: str, filename: str):
+        """Extract data models and schemas"""
+        models = []
+
+        # Look for entity sections
+        entity_sections = re.findall(
+            r'(?i)(?:entity|data model|schema|table).*?(?=\n#{1,3}|\n\n|\Z)',
+            content,
+            re.DOTALL
+        )
+
+        for section in entity_sections:
+            # Find table-like structures
+            table_matches = re.findall(
+                r'\|.*?\|.*?\|\s*\n(?:\|[-\s\|]*\|\s*\n)?((?:\|.*?\|.*?\|\s*\n)*)',
+                section,
+                re.MULTILINE
+            )
+
+            for match in table_matches:
+                if match.strip():
+                    models.append({
+                        'title': self._extract_section_title(section),
+                        'schema': self._parse_table_schema(match),
+                        'source_file': filename,
+                        'type': 'data_table'
+                    })
+
+        # Look for JSON schema patterns
+        json_matches = re.findall(
+            r'```(?:json|yaml)\s*(.*?)\s*```',
+            content,
+            re.DOTALL
+        )
+
+        for match in json_matches:
+            try:
+                # Try to parse as JSON
+                schema_data = json.loads(match)
+                models.append({
+                    'title': 'JSON Schema',
+                    'schema': schema_data,
+                    'source_file': filename,
+                    'type': 'json_schema'
+                })
+            except json.JSONDecodeError:
+                # If not valid JSON, treat as text schema
+                continue
+
+        # Look for specific entity definitions
+        entity_matches = re.findall(
+            r'(?:#### |### |## )(\w+ Entity).*?(?=\n#{1,4}|\n\n|\Z)',
+            content,
+            re.DOTALL
+        )
+
+        for match in entity_matches:
+            # Extract field definitions from the entity section
+            entity_content = match
+            field_matches = re.findall(
+                r'\|\s*(\w+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]*)\s*\|',
+                entity_content
+            )
+
+            if field_matches:
+                fields = []
+                for field_match in field_matches:
+                    if field_match[0].lower() not in ['field', 'name']:  # Skip header rows
+                        fields.append({
+                            'name': field_match[0].strip(),
+                            'type': field_match[1].strip(),
+                            'constraints': field_match[2].strip(),
+                            'description': field_match[3].strip()
+                        })
+
+                if fields:
+                    models.append({
+                        'title': match.split('\n')[0].strip(),
+                        'fields': fields,
+                        'source_file': filename,
+                        'type': 'entity_definition'
+                    })
+
+        self.requirements['data_models'].extend(models)
+
+    def _extract_api_endpoints(self, content: str, filename: str):
+        """Extract API endpoint definitions"""
+        endpoints = []
+
+        # Look for API tables
+        api_matches = re.findall(
+            r'\|\s*Method\s*\|\s*Endpoint\s*\|.*?\n(?:\|[-\s\|]*\|\s*\n)?((?:\|.*?\|.*?\|.*?\|\s*\n)*)',
+            content,
+            re.MULTILINE
+        )
+
+        for match in api_matches:
+            endpoint_rows = re.findall(
+                r'\|\s*(\w+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]*)\s*\|',
+                match
+            )
+
+            for row in endpoint_rows:
+                endpoints.append({
+                    'method': row[0].strip(),
+                    'endpoint': row[1].strip(),
+                    'description': row[2].strip(),
+                    'auth': row[3].strip() if len(row) > 3 else '',
+                    'source_file': filename
+                })
+
+        self.requirements['api_endpoints'].extend(endpoints)
+
+    def _extract_business_rules(self, content: str, filename: str):
+        """Extract business rules and constraints"""
+        rules = []
+
+        # Look for business rule patterns
+        rule_patterns = [
+            r'(?i)business rule[s]?:?\s*(.*?)(?=\n\n|\Z)',
+            r'(?i)rule[s]?:?\s*(.*?)(?=\n\n|\Z)',
+            r'(?i)constraint[s]?:?\s*(.*?)(?=\n\n|\Z)'
+        ]
+
+        for pattern in rule_patterns:
+            matches = re.findall(pattern, content, re.DOTALL)
+            for match in matches:
+                if len(match.strip()) > 20:
+                    rules.append({
+                        'description': match.strip(),
+                        'source_file': filename,
+                        'type': 'business_rule'
+                    })
+
+        self.requirements['business_rules'].extend(rules)
+
+    def _extract_constraints(self, content: str, filename: str):
+        """Extract technical and architectural constraints"""
+        constraints = []
+
+        # Look for constraint sections
+        constraint_sections = re.findall(
+            r'(?i)(?:constraint|limitation|restriction).*?(?=\n#{1,3}|\n\n|\Z)',
+            content,
+            re.DOTALL
+        )
+
+        for section in constraint_sections:
+            # Find bullet points
+            constraint_matches = re.findall(
+                r'(?:^|\n)[•\-\*]\s*(.+?)(?=\n[•\-\*]|\n\n|\Z)',
+                section,
+                re.MULTILINE | re.DOTALL
+            )
+
+            for match in constraint_matches:
+                constraint_text = match.strip()
+                if len(constraint_text) > 10:
+                    constraints.append({
+                        'description': constraint_text,
+                        'source_file': filename,
+                        'type': 'constraint'
+                    })
+
+        self.requirements['constraints'].extend(constraints)
+
+    def _extract_success_criteria(self, content: str, filename: str):
+        """Extract success criteria and acceptance criteria"""
+        criteria = []
+
+        # Look for success criteria patterns
+        criteria_patterns = [
+            r'(?i)success criteria.*?(?=\n#{1,3}|\n\n|\Z)',
+            r'(?i)acceptance criteria.*?(?=\n#{1,3}|\n\n|\Z)',
+            r'(?i)definition of done.*?(?=\n#{1,3}|\n\n|\Z)'
+        ]
+
+        for pattern in criteria_patterns:
+            matches = re.findall(pattern, content, re.DOTALL)
+            for match in matches:
+                # Find checkbox items or bullet points
+                item_matches = re.findall(
+                    r'(?:^|\n)(?:- \[[ x]\]|[•\-\*])\s*(.+?)(?=\n(?:- \[|[•\-\*])|\n\n|\Z)',
+                    match,
+                    re.MULTILINE | re.DOTALL
+                )
+
+                for item in item_matches:
+                    criteria_text = item.strip()
+                    if len(criteria_text) > 10:
+                        criteria.append({
+                            'description': criteria_text,
+                            'source_file': filename,
+                            'type': 'success_criteria'
+                        })
+
+        self.requirements['success_criteria'].extend(criteria)
+
+    def _extract_feature_title(self, feature_text: str) -> str:
+        """Extract a clean title from feature text"""
+        # Take first sentence or up to 100 chars
+        sentences = feature_text.split('.')
+        title = sentences[0] if sentences else feature_text
+        return title[:100] + '...' if len(title) > 100 else title
+
+    def _extract_section_title(self, section: str) -> str:
+        """Extract title from a section"""
+        lines = section.split('\n')
+        for line in lines:
+            if line.strip() and not line.startswith('#'):
+                return line.strip()[:100]
+        return "Untitled Section"
+
+    def _parse_table_schema(self, table_content: str) -> List[Dict[str, str]]:
+        """Parse table content into schema fields"""
+        fields = []
+        rows = table_content.strip().split('\n')
+
+        for row in rows:
+            if row.strip():
+                cols = [col.strip() for col in row.split('|') if col.strip()]
+                if len(cols) >= 2:
+                    fields.append({
+                        'name': cols[0],
+                        'type': cols[1] if len(cols) > 1 else '',
+                        'description': cols[2] if len(cols) > 2 else ''
+                    })
+
+        return fields
+
+    def _filter_mvp_only(self):
+        """Filter requirements to MVP-only items"""
+        mvp_keywords = ['mvp', 'minimum', 'core', 'essential', 'critical', 'must', 'required', 'phase 1']
+
+        for category in self.requirements:
+            if category == 'mvp_features':
+                continue  # Already MVP focused
+
+            filtered_items = []
+            for item in self.requirements[category]:
+                item_text = str(item).lower()
+                if any(keyword in item_text for keyword in mvp_keywords):
+                    filtered_items.append(item)
+                elif len(filtered_items) < 5:  # Keep first few items anyway
+                    filtered_items.append(item)
+
+            self.requirements[category] = filtered_items
+
+    def generate_requirements_document(self, output_file: str, input_dir: str):
+        """Generate comprehensive requirements document"""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        doc = f"""# MVP Requirements Document
+
+**Generated:** {timestamp}
+**Source:** {input_dir}
+**Analysis Tool:** parse-product-docs v1.0
+
+---
+
+"""
+
+        # Executive Summary
+        total_features = len(self.requirements['mvp_features'])
+        total_flows = len(self.requirements['user_flows'])
+        total_models = len(self.requirements['data_models'])
+
+        doc += f"""## 📋 Executive Summary
+
+This document contains extracted MVP requirements from product documentation.
+
+**Requirements Overview:**
+- MVP Features: {total_features}
+- User Flows: {total_flows}
+- Data Models: {total_models}
+- API Endpoints: {len(self.requirements['api_endpoints'])}
+- Business Rules: {len(self.requirements['business_rules'])}
+- Success Criteria: {len(self.requirements['success_criteria'])}
+
+---
+
+"""
+
+        # MVP Features
+        if self.requirements['mvp_features']:
+            doc += "## 🚀 MVP Features\n\n"
+
+            # Group by priority
+            high_priority = [f for f in self.requirements['mvp_features'] if f.get('priority') == 'high']
+            medium_priority = [f for f in self.requirements['mvp_features'] if f.get('priority') == 'medium']
+            other_priority = [f for f in self.requirements['mvp_features'] if f.get('priority') not in ['high', 'medium']]
+
+            if high_priority:
+                doc += "### High Priority Features\n\n"
+                for feature in high_priority:
+                    doc += f"**{feature['title']}**\n"
+                    doc += f"*Source: {feature['source_file']}*\n\n"
+                    doc += f"{feature['description']}\n\n"
+
+            if medium_priority:
+                doc += "### Medium Priority Features\n\n"
+                for feature in medium_priority:
+                    doc += f"**{feature['title']}**\n"
+                    doc += f"*Source: {feature['source_file']}*\n\n"
+                    doc += f"{feature['description']}\n\n"
+
+            if other_priority:
+                doc += "### Other Features\n\n"
+                for feature in other_priority:
+                    doc += f"**{feature['title']}**\n"
+                    doc += f"*Source: {feature['source_file']}*\n\n"
+                    doc += f"{feature['description']}\n\n"
+        else:
+            doc += "## 🚀 MVP Features\n\nNo MVP features extracted.\n\n"
+
+        # User Flows
+        if self.requirements['user_flows']:
+            doc += "## 👤 User Flows\n\n"
+            for flow in self.requirements['user_flows']:
+                doc += f"### {flow['title']}\n"
+                doc += f"*Source: {flow['source_file']} | Type: {flow.get('type', 'user_flow')}*\n\n"
+
+                if 'steps' in flow and flow['steps']:
+                    doc += "**Steps:**\n"
+                    for i, step in enumerate(flow['steps'], 1):
+                        doc += f"{i}. {step}\n"
+                    doc += "\n"
+
+                if 'description' in flow:
+                    doc += f"{flow['description']}\n\n"
+        else:
+            doc += "## 👤 User Flows\n\nNo user flows extracted.\n\n"
+
+        # Data Models
+        if self.requirements['data_models']:
+            doc += "## 📊 Data Models\n\n"
+            for model in self.requirements['data_models']:
+                doc += f"### {model['title']}\n"
+                doc += f"*Source: {model['source_file']} | Type: {model.get('type', 'data_model')}*\n\n"
+
+                if 'fields' in model and model['fields']:
+                    doc += "| Field | Type | Constraints | Description |\n"
+                    doc += "|-------|------|-------------|-------------|\n"
+                    for field in model['fields']:
+                        doc += f"| {field.get('name', '')} | {field.get('type', '')} | {field.get('constraints', '')} | {field.get('description', '')} |\n"
+                    doc += "\n"
+
+                if 'schema' in model:
+                    if isinstance(model['schema'], dict):
+                        doc += "**Schema:**\n```json\n"
+                        doc += json.dumps(model['schema'], indent=2)
+                        doc += "\n```\n\n"
+                    elif isinstance(model['schema'], list):
+                        doc += "**Fields:**\n"
+                        for field in model['schema']:
+                            if isinstance(field, dict):
+                                doc += f"- {field.get('name', 'Unknown')}: {field.get('type', 'Unknown')}\n"
+                        doc += "\n"
+        else:
+            doc += "## 📊 Data Models\n\nNo data models extracted.\n\n"
+
+        # API Endpoints
+        if self.requirements['api_endpoints']:
+            doc += "## 🔌 API Endpoints\n\n"
+            doc += "| Method | Endpoint | Description | Auth |\n"
+            doc += "|--------|----------|-------------|------|\n"
+            for endpoint in self.requirements['api_endpoints']:
+                doc += f"| {endpoint.get('method', '')} | {endpoint.get('endpoint', '')} | {endpoint.get('description', '')} | {endpoint.get('auth', '')} |\n"
+            doc += "\n"
+        else:
+            doc += "## 🔌 API Endpoints\n\nNo API endpoints extracted.\n\n"
+
+        # Business Rules
+        if self.requirements['business_rules']:
+            doc += "## 📏 Business Rules\n\n"
+            for i, rule in enumerate(self.requirements['business_rules'], 1):
+                doc += f"{i}. {rule['description']}\n"
+                doc += f"   *Source: {rule['source_file']}*\n\n"
+        else:
+            doc += "## 📏 Business Rules\n\nNo business rules extracted.\n\n"
+
+        # Success Criteria
+        if self.requirements['success_criteria']:
+            doc += "## ✅ Success Criteria\n\n"
+            for criteria in self.requirements['success_criteria']:
+                doc += f"- [ ] {criteria['description']}\n"
+            doc += "\n"
+        else:
+            doc += "## ✅ Success Criteria\n\nNo success criteria extracted.\n\n"
+
+        # Implementation Roadmap
+        doc += """## 🗺️ Implementation Roadmap
+
+### Phase 1: Core MVP Features
+Focus on high-priority features identified in the analysis.
+
+### Phase 2: User Experience
+Implement user flows and interaction patterns.
+
+### Phase 3: Data Integration
+Set up data models and API endpoints.
+
+### Phase 4: Polish & Launch
+Apply business rules and validate success criteria.
+
+---
+
+## 📝 Development Notes
+
+### Architecture Considerations
+- Design data models to support identified use cases
+- Implement APIs following extracted endpoint specifications
+- Ensure user flows are supported by frontend routing
+
+### Testing Strategy
+- Create test cases based on extracted user flows
+- Validate business rules through unit tests
+- Use success criteria as acceptance test guidelines
+
+---
+
+*Document generated by parse-product-docs tool*
+"""
+
+        # Write to file
+        output_path = Path(output_file)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, 'w') as f:
+            f.write(doc)
+
+        self.log(f"Requirements document written to: {output_file}")
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Parse product documentation to extract structured requirements",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__
+    )
+
+    parser.add_argument('input_dir', help='Input directory containing product documentation')
+    parser.add_argument('--extract-mvp-features', action='store_true', help='Extract MVP feature list')
+    parser.add_argument('--extract-user-flows', action='store_true', help='Extract user journeys and flows')
+    parser.add_argument('--extract-data-models', action='store_true', help='Extract data schemas and models')
+    parser.add_argument('--priority', default='all', help='Priority filter (mvp-only, all)')
+    parser.add_argument('--output', required=True, help='Output markdown file')
+    parser.add_argument('--verbose', action='store_true', help='Verbose output')
+
+    args = parser.parse_args()
+
+    # Prepare options
+    options = {
+        'extract_mvp_features': args.extract_mvp_features,
+        'extract_user_flows': args.extract_user_flows,
+        'extract_data_models': args.extract_data_models,
+        'priority': args.priority
+    }
+
+    try:
+        # Create parser
+        parser = ProductDocsParser(verbose=args.verbose)
+
+        # Parse documentation
+        requirements = parser.parse_directory(args.input_dir, options)
+
+        # Generate requirements document
+        parser.generate_requirements_document(args.output, args.input_dir)
+
+        print(f"✅ Parsing complete! Requirements saved to: {args.output}")
+
+        # Print summary
+        print(f"\n📊 Summary:")
+        print(f"   MVP Features: {len(requirements['mvp_features'])}")
+        print(f"   User Flows: {len(requirements['user_flows'])}")
+        print(f"   Data Models: {len(requirements['data_models'])}")
+        print(f"   API Endpoints: {len(requirements['api_endpoints'])}")
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        exit(1)
+
+if __name__ == '__main__':
+    main()
