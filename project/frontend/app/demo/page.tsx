@@ -130,7 +130,7 @@ function DemoContent() {
             <Button variant="outline" onClick={() => warning('Please be careful!')}>
               Show Warning
             </Button>
-            <Button variant="primary" onClick={() => info('Here's some information')}>
+            <Button variant="primary" onClick={() => info('Here is some information')}>
               Show Info
             </Button>
           </div>

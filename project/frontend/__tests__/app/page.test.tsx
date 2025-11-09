@@ -13,10 +13,10 @@ describe('Home Page', () => {
     expect(heading).toBeInTheDocument();
   });
 
-  it('should display coming soon message', () => {
+  it('should display tagline', () => {
     render(<Home />);
 
-    const message = screen.getByText(/Frontend application coming soon/i);
+    const message = screen.getByText(/AI-powered contract review and refund eligibility determination/i);
 
     expect(message).toBeInTheDocument();
   });
