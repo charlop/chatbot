@@ -23,62 +23,79 @@
 
 ## Table: users
 
-**Description:** User accounts with role-based access control (Admin/User)
+**Description:** User profiles with authorization roles (authentication via external provider)
 
-**Purpose:** Authentication, authorization, and user management
+**Purpose:** Store user profile data and application-specific authorization (authentication handled externally)
+
+**Authentication:** External provider (Auth0, Okta, AWS Cognito, etc.)
 
 | Column | Data Type | Constraints | Description | Example |
 |--------|-----------|-------------|-------------|---------|
-| user_id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique identifier for user | `<uuid>` |
-| username | VARCHAR(100) | UNIQUE, NOT NULL | Unique username for login | `john.doe` |
-| email | VARCHAR(255) | UNIQUE, NOT NULL, CHECK email format | User's email address | `john.doe@company.com` |
-| password_hash | VARCHAR(255) | NOT NULL | Bcrypt hashed password (12 rounds) | `$2b$12$...` |
-| role | VARCHAR(20) | NOT NULL, CHECK IN ('admin', 'user') | User role for access control | `user` or `admin` |
-| first_name | VARCHAR(100) | NULL | User's first name | `John` |
-| last_name | VARCHAR(100) | NULL | User's last name | `Doe` |
+| user_id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique internal identifier for user | `<uuid>` |
+| **External Auth Provider Fields** |
+| auth_provider | VARCHAR(50) | NOT NULL | External authentication provider | `auth0`, `okta`, `cognito` |
+| auth_provider_user_id | VARCHAR(255) | UNIQUE, NOT NULL | Unique user ID from auth provider (sub claim from JWT) | `auth0\|507f1f77bcf86cd799439011` |
+| **User Profile Fields** |
+| email | VARCHAR(255) | UNIQUE, NOT NULL, CHECK email format | User's email address (from auth provider) | `john.doe@company.com` |
+| username | VARCHAR(100) | NULL | Username (from auth provider) | `john.doe` |
+| first_name | VARCHAR(100) | NULL | User's first name (from auth provider) | `John` |
+| last_name | VARCHAR(100) | NULL | User's last name (from auth provider) | `Doe` |
+| **Application Authorization** |
+| role | VARCHAR(20) | NOT NULL, CHECK IN ('admin', 'user') | Application role for access control | `user` or `admin` |
+| is_active | BOOLEAN | DEFAULT true | Account active status | `true` |
+| **Timestamps** |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT CURRENT_TIMESTAMP | Account creation timestamp | `2025-11-06 10:30:00-05` |
 | updated_at | TIMESTAMP WITH TIME ZONE | DEFAULT CURRENT_TIMESTAMP | Last profile update timestamp | `2025-11-06 15:45:00-05` |
 | last_login_at | TIMESTAMP WITH TIME ZONE | NULL | Last successful login timestamp | `2025-11-06 09:00:00-05` |
-| is_active | BOOLEAN | DEFAULT true | Account active status | `true` |
 
 **Indexes:**
-- `idx_users_username` on `username`
 - `idx_users_email` on `email`
+- `idx_users_auth_provider_user_id` on `auth_provider_user_id`
 - `idx_users_is_active` on `is_active`
 
 **Triggers:**
 - `update_users_updated_at` - Auto-updates `updated_at` on row modification
 
+**Business Rules:**
+- Authentication is handled entirely by external provider
+- No passwords stored in database
+- User record created on first login via auth provider callback
+- `auth_provider_user_id` must match the `sub` claim from JWT
+- Email updates should sync from auth provider
+
 ---
 
 ## Table: sessions
 
-**Description:** Active user sessions with JWT tokens
+**Description:** Active user sessions for audit trail (auth tokens managed by external provider)
 
-**Purpose:** Session management, token tracking, and security monitoring
+**Purpose:** Track session metadata for audit trail and user context (authentication handled by external provider)
+
+**Note:** Authentication tokens (JWT) are not stored in database. They are managed by external auth provider and validated on each request.
 
 | Column | Data Type | Constraints | Description | Example |
 |--------|-----------|-------------|-------------|---------|
 | session_id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique session identifier | `<uuid>` |
 | user_id | UUID | NOT NULL, FOREIGN KEY → users(user_id) | User who owns this session | `<user-uuid>` |
-| jwt_token | TEXT | NOT NULL | JSON Web Token for authentication | `eyJhbGciOiJIUzI1NiIs...` |
-| refresh_token | UUID | DEFAULT gen_random_uuid() | Token for refreshing expired JWT | `<refresh-uuid>` |
+| **Session Metadata** |
 | ip_address | INET | NULL | Client IP address | `192.168.1.100` |
 | user_agent | TEXT | NULL | Client browser/device info | `Mozilla/5.0 (Windows NT 10.0; Win64; x64)...` |
-| expires_at | TIMESTAMP WITH TIME ZONE | NOT NULL | Session expiration time | `2025-11-06 14:30:00-05` |
+| **Timestamps** |
 | created_at | TIMESTAMP WITH TIME ZONE | DEFAULT CURRENT_TIMESTAMP | Session start time | `2025-11-06 10:30:00-05` |
 | last_activity | TIMESTAMP WITH TIME ZONE | DEFAULT CURRENT_TIMESTAMP | Last request timestamp | `2025-11-06 11:15:00-05` |
+| expires_at | TIMESTAMP WITH TIME ZONE | NOT NULL | Session expiration time | `2025-11-06 14:30:00-05` |
 | is_active | BOOLEAN | DEFAULT true | Session active status | `true` |
 
 **Indexes:**
 - `idx_sessions_user_id` on `user_id`
 - `idx_sessions_expires_at` on `expires_at`
 - `idx_sessions_is_active` on `is_active`
-- `idx_sessions_refresh_token` on `refresh_token`
 
 **Business Rules:**
 - Sessions expire after 4 hours of inactivity (configurable)
 - Inactive sessions are cleaned up by `cleanup_expired_sessions()` function
+- Auth tokens (JWT) managed by external provider (not stored here)
+- Session records used for audit trail and user activity tracking
 
 ---
 

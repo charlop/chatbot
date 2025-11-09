@@ -12,29 +12,40 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =============================================================================
--- USERS AND AUTHENTICATION
+-- USERS AND AUTHENTICATION (External Auth Provider)
 -- =============================================================================
 
--- Users table: Stores user accounts with role-based access control
+-- Users table: Stores user profile data (authentication via external provider)
+-- Authentication is handled by external provider (Auth0, Okta, AWS Cognito, etc.)
+-- This table only stores user profile and authorization data
 CREATE TABLE users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(100) UNIQUE NOT NULL,
+
+    -- External auth provider identifiers
+    auth_provider VARCHAR(50) NOT NULL, -- 'auth0', 'okta', 'cognito', etc.
+    auth_provider_user_id VARCHAR(255) UNIQUE NOT NULL, -- sub claim from JWT
+
+    -- User profile data (from auth provider)
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'user')),
+    username VARCHAR(100),
     first_name VARCHAR(100),
     last_name VARCHAR(100),
+
+    -- Application-specific authorization
+    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'user')),
+    is_active BOOLEAN DEFAULT true,
+
+    -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_login_at TIMESTAMP WITH TIME ZONE,
-    is_active BOOLEAN DEFAULT true,
 
     CONSTRAINT email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 );
 
 -- Index for user lookups
-CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_auth_provider_user_id ON users(auth_provider_user_id);
 CREATE INDEX idx_users_is_active ON users(is_active);
 
 -- Trigger to update updated_at timestamp
@@ -51,17 +62,22 @@ CREATE TRIGGER update_users_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- User sessions table: Track active sessions (alternative to Redis)
+-- User sessions table: Track active sessions for audit and context
+-- Note: Authentication tokens are managed by external auth provider
+-- This table tracks session metadata for audit trail and user context
 CREATE TABLE sessions (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    jwt_token TEXT NOT NULL,
-    refresh_token UUID DEFAULT gen_random_uuid(),
+
+    -- Session metadata (no auth tokens stored)
     ip_address INET,
     user_agent TEXT,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+
+    -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_activity TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+
     is_active BOOLEAN DEFAULT true
 );
 
@@ -69,7 +85,6 @@ CREATE TABLE sessions (
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
 CREATE INDEX idx_sessions_is_active ON sessions(is_active);
-CREATE INDEX idx_sessions_refresh_token ON sessions(refresh_token);
 
 -- =============================================================================
 -- CONTRACTS
@@ -471,8 +486,8 @@ $$ LANGUAGE plpgsql;
 -- COMMENTS
 -- =============================================================================
 
-COMMENT ON TABLE users IS 'User accounts with role-based access control (Admin/User)';
-COMMENT ON TABLE sessions IS 'Active user sessions with JWT tokens';
+COMMENT ON TABLE users IS 'User profiles with authorization roles (authentication via external provider)';
+COMMENT ON TABLE sessions IS 'Active user sessions for audit trail (auth tokens managed by external provider)';
 COMMENT ON TABLE contracts IS 'Contract metadata synced from external relational database';
 COMMENT ON TABLE extractions IS 'AI-extracted data from contracts with confidence scores';
 COMMENT ON TABLE corrections IS 'Human corrections to AI extractions for tracking accuracy';
@@ -481,6 +496,8 @@ COMMENT ON TABLE system_config IS 'Application configuration settings';
 COMMENT ON TABLE chat_messages IS 'AI chat conversation history';
 COMMENT ON TABLE extraction_metrics IS 'Daily aggregated metrics for AI extraction performance';
 
+COMMENT ON COLUMN users.auth_provider IS 'External authentication provider (auth0, okta, cognito, etc.)';
+COMMENT ON COLUMN users.auth_provider_user_id IS 'Unique user ID from external auth provider (sub claim from JWT)';
 COMMENT ON COLUMN extractions.gap_premium_confidence IS 'Confidence score 0-100 for GAP insurance premium extraction';
 COMMENT ON COLUMN extractions.llm_provider IS 'LLM provider used: openai, anthropic, or bedrock';
 COMMENT ON COLUMN audit_events.event_data IS 'Flexible JSONB field for event-specific data';
