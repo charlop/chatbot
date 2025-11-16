@@ -16,7 +16,6 @@ from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from redis.asyncio import Redis
 
 from app.models.database.extraction import Extraction
 from app.models.database.contract import Contract

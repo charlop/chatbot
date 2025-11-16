@@ -29,7 +29,8 @@ class TestBaseRepository:
         contract = Contract(
             contract_id="TEST-CREATE-001",
             account_number="ACC-CREATE-001",
-            pdf_url="https://example.com/create.pdf",
+            s3_bucket="test-contracts",
+            s3_key="contracts/TEST-CREATE-001.pdf",
         )
 
         created = await repo.create(contract)
@@ -61,7 +62,8 @@ class TestBaseRepository:
             Contract(
                 contract_id=f"TEST-ALL-{i:03d}",
                 account_number=f"ACC-ALL-{i:03d}",
-                pdf_url=f"https://example.com/all-{i}.pdf",
+                s3_bucket="test-contracts",
+                s3_key=f"contracts/TEST-ALL-{i:03d}.pdf",
             )
             for i in range(5)
         ]
@@ -81,7 +83,8 @@ class TestBaseRepository:
             contract = Contract(
                 contract_id=f"TEST-LIMIT-{i:03d}",
                 account_number=f"ACC-LIMIT-{i:03d}",
-                pdf_url=f"https://example.com/limit-{i}.pdf",
+                s3_bucket="test-contracts",
+                s3_key=f"contracts/TEST-LIMIT-{i:03d}.pdf",
             )
             await repo.create(contract)
 
@@ -97,7 +100,8 @@ class TestBaseRepository:
             contract = Contract(
                 contract_id=f"TEST-OFFSET-{i:03d}",
                 account_number=f"ACC-OFFSET-{i:03d}",
-                pdf_url=f"https://example.com/offset-{i}.pdf",
+                s3_bucket="test-contracts",
+                s3_key=f"contracts/TEST-OFFSET-{i:03d}.pdf",
             )
             await repo.create(contract)
 
@@ -132,7 +136,8 @@ class TestBaseRepository:
         contract = Contract(
             contract_id="TEST-DELETE-001",
             account_number="ACC-DELETE-001",
-            pdf_url="https://example.com/delete.pdf",
+            s3_bucket="test-contracts",
+            s3_key="contracts/TEST-DELETE-001.pdf",
         )
         created = await repo.create(contract)
 
@@ -160,7 +165,8 @@ class TestBaseRepository:
             contract = Contract(
                 contract_id=f"TEST-COUNT-{i:03d}",
                 account_number=f"ACC-COUNT-{i:03d}",
-                pdf_url=f"https://example.com/count-{i}.pdf",
+                s3_bucket="test-contracts",
+                s3_key=f"contracts/TEST-COUNT-{i:03d}.pdf",
             )
             await repo.create(contract)
 

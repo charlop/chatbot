@@ -94,12 +94,8 @@ class AuditEvent(Base):
         Index("idx_audit_events_timestamp", "timestamp"),
         Index("idx_audit_events_event_type", "event_type"),
         Index("idx_audit_events_session_id", "session_id"),
-        # Partial index for recent events (last 30 days) - faster queries
-        Index(
-            "idx_audit_events_recent",
-            "timestamp",
-            postgresql_where="timestamp > CURRENT_TIMESTAMP - INTERVAL '30 days'",
-        ),
+        # Note: Partial index with CURRENT_TIMESTAMP removed due to IMMUTABLE constraint
+        # Regular timestamp index (idx_audit_events_timestamp) will be used for recent queries
     )
 
     def __repr__(self) -> str:

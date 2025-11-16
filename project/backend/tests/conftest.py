@@ -83,7 +83,16 @@ async def db_session(test_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession
             # Use db_session here
             pass
     """
-    async with AsyncSessionLocal() as session:
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    # Create session factory from test engine
+    TestSessionLocal = async_sessionmaker(
+        test_db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    async with TestSessionLocal() as session:
         try:
             yield session
             await session.rollback()  # Rollback any changes
@@ -117,7 +126,8 @@ async def test_contract(db_session: AsyncSession):
     contract = Contract(
         contract_id="TEST-CONTRACT-001",
         account_number="ACC-TEST-12345",
-        pdf_url="https://example.com/test-contract.pdf",
+        s3_bucket="test-contracts",
+        s3_key="contracts/TEST-CONTRACT-001.pdf",
         contract_type="GAP",
         customer_name="Test Customer",
     )

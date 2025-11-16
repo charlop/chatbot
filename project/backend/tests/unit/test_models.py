@@ -29,7 +29,8 @@ class TestContractModel:
         contract = Contract(
             contract_id="TEST-001",
             account_number="ACC-12345",
-            pdf_url="https://example.com/contract.pdf",
+            s3_bucket="test-bucket",
+            s3_key="contracts/TEST-001.pdf",
             contract_type="GAP",
         )
         db_session.add(contract)
@@ -38,7 +39,8 @@ class TestContractModel:
 
         assert contract.contract_id == "TEST-001"
         assert contract.account_number == "ACC-12345"
-        assert contract.pdf_url == "https://example.com/contract.pdf"
+        assert contract.s3_bucket == "test-bucket"
+        assert contract.s3_key == "contracts/TEST-001.pdf"
         assert contract.contract_type == "GAP"
         assert contract.created_at is not None
         assert contract.updated_at is not None
@@ -54,7 +56,8 @@ class TestContractModel:
         contract = Contract(
             contract_id="TEST-002",
             account_number="ACC-67890",
-            pdf_url="https://example.com/contract2.pdf",
+            s3_bucket="test-bucket",
+            s3_key="contracts/TEST-002.pdf",
             vehicle_info=vehicle_info,
         )
         db_session.add(contract)
@@ -69,12 +72,14 @@ class TestContractModel:
         contract1 = Contract(
             contract_id="TEST-003",
             account_number="ACC-111",
-            pdf_url="https://example.com/c1.pdf",
+            s3_bucket="test-bucket",
+            s3_key="contracts/TEST-003.pdf",
         )
         contract2 = Contract(
             contract_id="TEST-003",  # Same ID
             account_number="ACC-222",
-            pdf_url="https://example.com/c2.pdf",
+            s3_bucket="test-bucket",
+            s3_key="contracts/TEST-003-dup.pdf",
         )
 
         db_session.add(contract1)

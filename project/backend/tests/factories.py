@@ -38,7 +38,8 @@ class ContractFactory:
         defaults = {
             "contract_id": contract_id,
             "account_number": account_number,
-            "pdf_url": f"https://example.com/contracts/{contract_id}.pdf",
+            "s3_bucket": "test-contracts",
+            "s3_key": f"contracts/{contract_id}.pdf",
             "document_repository_id": f"DOC-{contract_id}",
             "contract_type": contract_type,
             "contract_date": date.today() - timedelta(days=30),

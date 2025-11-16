@@ -13,7 +13,6 @@ from typing import BinaryIO
 
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
-from redis.asyncio import Redis
 
 from app.config import settings
 from app.utils.cache import get_redis
