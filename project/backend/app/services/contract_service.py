@@ -80,8 +80,8 @@ class ContractService:
                 },
             )
 
-            # Convert to response
-            response = await self._contract_to_response(contract)
+            # Convert to response (no extraction for search)
+            response = await self._contract_to_response(contract, include_extraction=False)
 
             # Cache the result (15-minute TTL)
             await cache_set(cache_key, response.model_dump(), ttl=settings.cache_ttl_contract)
@@ -112,8 +112,8 @@ class ContractService:
                 },
             )
 
-            # Convert to response
-            response = await self._contract_to_response(created_contract)
+            # Convert to response (no extraction for search)
+            response = await self._contract_to_response(created_contract, include_extraction=False)
 
             # Cache the result (15-minute TTL)
             await cache_set(cache_key, response.model_dump(), ttl=settings.cache_ttl_contract)
@@ -146,8 +146,11 @@ class ContractService:
             logger.info(f"Contract found in cache: {contract_id}")
             return ContractResponse(**cached_contract)
 
-        # Get contract from database
-        contract = await self.contract_repo.get_by_id(contract_id)
+        # Get contract from database (with extraction if requested)
+        if include_extraction:
+            contract = await self.contract_repo.get_with_extraction(contract_id)
+        else:
+            contract = await self.contract_repo.get_by_id(contract_id)
 
         if not contract:
             logger.warning(f"Contract not found: {contract_id}")
@@ -176,30 +179,65 @@ class ContractService:
 
         Args:
             contract: Contract ORM model
-            include_extraction: Whether to include extraction data (placeholder for Day 6)
+            include_extraction: Whether to include extraction data
 
         Returns:
             ContractResponse
         """
-        # NOTE: Extraction will be added in Day 6
-        # For now, just return contract data without extraction
+        # Build base response
+        response_dict = {
+            "contract_id": contract.contract_id,
+            "account_number": contract.account_number,
+            "s3_bucket": contract.s3_bucket,
+            "s3_key": contract.s3_key,
+            "text_extraction_status": contract.text_extraction_status,
+            "text_extracted_at": contract.text_extracted_at,
+            "document_repository_id": contract.document_repository_id,
+            "contract_type": contract.contract_type,
+            "contract_date": contract.contract_date,
+            "customer_name": contract.customer_name,
+            "vehicle_info": contract.vehicle_info,
+            "created_at": contract.created_at,
+            "updated_at": contract.updated_at,
+            "last_synced_at": contract.last_synced_at,
+        }
 
-        return ContractResponse(
-            contract_id=contract.contract_id,
-            account_number=contract.account_number,
-            s3_bucket=contract.s3_bucket,
-            s3_key=contract.s3_key,
-            text_extraction_status=contract.text_extraction_status,
-            text_extracted_at=contract.text_extracted_at,
-            document_repository_id=contract.document_repository_id,
-            contract_type=contract.contract_type,
-            contract_date=contract.contract_date,
-            customer_name=contract.customer_name,
-            vehicle_info=contract.vehicle_info,
-            created_at=contract.created_at,
-            updated_at=contract.updated_at,
-            last_synced_at=contract.last_synced_at,
-        )
+        # Include extraction data if requested and available
+        if include_extraction and hasattr(contract, "extractions") and contract.extractions:
+            extraction = contract.extractions
+            response_dict["extracted_data"] = {
+                "gap_premium": (
+                    float(extraction.gap_insurance_premium)
+                    if extraction.gap_insurance_premium is not None
+                    else None
+                ),
+                "gap_premium_confidence": (
+                    float(extraction.gap_insurance_premium_confidence)
+                    if extraction.gap_insurance_premium_confidence is not None
+                    else None
+                ),
+                "gap_premium_source": extraction.gap_insurance_premium_source,
+                "refund_method": extraction.refund_calculation_method,
+                "refund_method_confidence": (
+                    float(extraction.refund_calculation_method_confidence)
+                    if extraction.refund_calculation_method_confidence is not None
+                    else None
+                ),
+                "refund_method_source": extraction.refund_calculation_method_source,
+                "cancellation_fee": (
+                    float(extraction.cancellation_fee)
+                    if extraction.cancellation_fee is not None
+                    else None
+                ),
+                "cancellation_fee_confidence": (
+                    float(extraction.cancellation_fee_confidence)
+                    if extraction.cancellation_fee_confidence is not None
+                    else None
+                ),
+                "cancellation_fee_source": extraction.cancellation_fee_source,
+            }
+
+        return ContractResponse(**response_dict)
 
     async def _log_audit_event(
         self, contract_id: str, event_type: str, event_data: dict, user_id: Optional[UUID] = None

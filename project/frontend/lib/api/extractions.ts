@@ -47,6 +47,23 @@ export interface SubmitExtractionResponse extends Extraction {
 }
 
 /**
+ * Create/trigger extraction for a contract
+ * @param contractId - The contract ID
+ * @param force_reextract - Force re-extraction even if exists
+ * @returns Promise with extraction data
+ */
+export const createExtraction = async (
+  contractId: string,
+  force_reextract: boolean = false
+): Promise<Extraction> => {
+  const response = await apiClient.post<Extraction>('/extractions/create', {
+    contract_id: contractId,
+    force_reextract,
+  });
+  return response.data;
+};
+
+/**
  * Get extraction data for a contract
  * @param contractId - The contract ID
  * @returns Promise with extraction data including confidence scores and source locations
