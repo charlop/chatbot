@@ -123,9 +123,6 @@ class ExtractionResponse(BaseModel):
     extracted_by: UUID | None = None
     approved_at: datetime | None = None
     approved_by: UUID | None = None
-    rejected_at: datetime | None = None
-    rejected_by: UUID | None = None
-    rejection_reason: str | None = None
 
     # TODO: Add corrections in Day 7
     # corrections: List["CorrectionResponse"] | None = None
@@ -178,9 +175,6 @@ class ExtractionResponse(BaseModel):
             extracted_by=extraction.extracted_by,
             approved_at=extraction.approved_at,
             approved_by=extraction.approved_by,
-            rejected_at=extraction.rejected_at,
-            rejected_by=extraction.rejected_by,
-            rejection_reason=extraction.rejection_reason,
             # corrections=None,  # Will be populated separately if needed (Day 7)
         )
 

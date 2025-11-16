@@ -40,64 +40,9 @@ class ContractSearchRequest(BaseModel):
     }
 
 
-class ExtractionApprovalRequest(BaseModel):
+class FieldCorrection(BaseModel):
     """
-    Request schema for approving an extraction.
-    No additional fields required - approval is implicit.
-    """
-
-    notes: str | None = Field(
-        default=None,
-        max_length=500,
-        description="Optional notes about the approval",
-    )
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {"notes": "Verified all extracted values against PDF"},
-                {},
-            ]
-        }
-    }
-
-
-class ExtractionRejectionRequest(BaseModel):
-    """
-    Request schema for rejecting an extraction.
-    Requires a rejection reason.
-    """
-
-    reason: str = Field(
-        ...,
-        min_length=1,
-        max_length=1000,
-        description="Reason for rejection (required)",
-    )
-
-    @field_validator("reason")
-    @classmethod
-    def validate_reason(cls, v: str) -> str:
-        """Validate reason is not empty and trim whitespace."""
-        v = v.strip()
-        if not v:
-            raise ValueError("Rejection reason cannot be empty or whitespace")
-        return v
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {"reason": "Extracted premium amount does not match PDF"},
-                {"reason": "Unable to verify refund calculation method"},
-            ]
-        }
-    }
-
-
-class ExtractionEditRequest(BaseModel):
-    """
-    Request schema for editing/correcting an extracted field.
-    Stores the correction while preserving original value.
+    Schema for a single field correction.
     """
 
     field_name: str = Field(
@@ -138,18 +83,39 @@ class ExtractionEditRequest(BaseModel):
             raise ValueError("Corrected value cannot be empty or whitespace")
         return v
 
+
+class ExtractionSubmitRequest(BaseModel):
+    """
+    Request schema for submitting an extraction with optional corrections.
+    Combines approval with inline field corrections.
+    """
+
+    corrections: List[FieldCorrection] = Field(
+        default_factory=list,
+        description="List of field corrections (if any)",
+    )
+    notes: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Optional notes about the submission",
+    )
+
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
-                    "field_name": "gap_insurance_premium",
-                    "corrected_value": "550.00",
-                    "correction_reason": "OCR misread the decimal point",
+                    "corrections": [],
+                    "notes": "All values look correct",
                 },
                 {
-                    "field_name": "refund_calculation_method",
-                    "corrected_value": "Pro-rata",
-                    "correction_reason": None,
+                    "corrections": [
+                        {
+                            "field_name": "gap_insurance_premium",
+                            "corrected_value": "550.00",
+                            "correction_reason": "OCR misread the decimal point",
+                        }
+                    ],
+                    "notes": "Corrected premium amount",
                 },
             ]
         }

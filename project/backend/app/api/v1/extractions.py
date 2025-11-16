@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.requests import ExtractionCreateRequest
+from app.schemas.requests import ExtractionCreateRequest, ExtractionSubmitRequest
 from app.schemas.responses import ExtractionResponse, ErrorResponse
 from app.services.extraction_service import (
     ExtractionService,
@@ -203,3 +203,105 @@ async def get_extraction(
     response = ExtractionResponse.from_orm_model(extraction)
 
     return response
+
+
+@router.post(
+    "/extractions/{extraction_id}/submit",
+    response_model=ExtractionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Submit extraction with optional corrections",
+    description=(
+        "Submit reviewed extraction data with optional field corrections. "
+        "Handles both simple approval (no corrections) and approval with inline edits. "
+        "Corrections are dual-written: stored in corrections table for ML metrics "
+        "and applied to extractions table as source of truth. "
+        "Transaction is atomic - all corrections applied or none."
+    ),
+    responses={
+        200: {
+            "description": "Extraction submitted successfully",
+            "model": ExtractionResponse,
+        },
+        404: {
+            "description": "Extraction not found",
+            "model": ErrorResponse,
+        },
+        400: {
+            "description": "Extraction already submitted or validation error",
+            "model": ErrorResponse,
+        },
+    },
+)
+async def submit_extraction(
+    extraction_id: UUID,
+    request: ExtractionSubmitRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Submit extraction with optional corrections.
+
+    Flow:
+    1. Validate extraction exists and is pending
+    2. Apply any corrections (dual-write to corrections table and extraction fields)
+    3. Update status to 'approved'
+    4. Return updated extraction
+
+    Args:
+        extraction_id: Extraction UUID
+        request: Submit request with optional corrections
+        db: Database session (injected)
+
+    Returns:
+        ExtractionResponse with updated values and corrections applied
+
+    Raises:
+        HTTPException 404: If extraction not found
+        HTTPException 400: If extraction already submitted or validation error
+    """
+    logger.info(
+        f"POST /extractions/{extraction_id}/submit - " f"corrections: {len(request.corrections)}"
+    )
+
+    # Initialize service
+    extraction_service = ExtractionService(db)
+
+    try:
+        # Submit extraction (with or without corrections)
+        extraction = await extraction_service.submit_extraction(
+            extraction_id=extraction_id,
+            corrections=request.corrections,
+            notes=request.notes,
+            submitted_by=None,  # TODO: Get from auth context in Phase 2
+        )
+
+        # Convert to response
+        response = ExtractionResponse.from_orm_model(extraction)
+
+        logger.info(
+            f"Extraction {extraction_id} submitted successfully "
+            f"(corrections applied: {len(request.corrections)})"
+        )
+
+        return response
+
+    except ExtractionServiceError as e:
+        # Check if not found vs already submitted
+        error_msg = str(e)
+        if "not found" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=error_msg,
+            )
+        else:
+            # Already submitted or validation error
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_msg,
+            )
+
+    except Exception as e:
+        logger.error(f"Unexpected error submitting extraction {extraction_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )

@@ -5,9 +5,8 @@ Exports all Pydantic request and response schemas.
 
 from app.schemas.requests import (
     ContractSearchRequest,
-    ExtractionApprovalRequest,
-    ExtractionRejectionRequest,
-    ExtractionEditRequest,
+    ExtractionSubmitRequest,
+    FieldCorrection,
     ChatMessageRequest,
     ExtractionCreateRequest,
 )
@@ -27,9 +26,8 @@ from app.schemas.responses import (
 __all__ = [
     # Requests
     "ContractSearchRequest",
-    "ExtractionApprovalRequest",
-    "ExtractionRejectionRequest",
-    "ExtractionEditRequest",
+    "ExtractionSubmitRequest",
+    "FieldCorrection",
     "ChatMessageRequest",
     "ExtractionCreateRequest",
     # Responses

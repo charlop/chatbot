@@ -310,3 +310,131 @@ class ExtractionService:
                 logger.info(f"Invalidated extraction cache for {contract_id}")
             except Exception as e:
                 logger.warning(f"Failed to invalidate cache: {e}")
+
+    async def submit_extraction(
+        self,
+        extraction_id: UUID,
+        corrections: list,
+        notes: Optional[str] = None,
+        submitted_by: Optional[UUID] = None,
+    ) -> Extraction:
+        """
+        Submit extraction with optional field corrections.
+
+        Handles both simple approval (no corrections) and approval with corrections.
+        Corrections are dual-written:
+        1. Stored in corrections table (for ML fine-tuning metrics)
+        2. Applied to extraction table (source of truth)
+
+        Flow:
+        1. Validate extraction exists and is pending
+        2. For each correction:
+           - Create Correction record (audit trail)
+           - Update corresponding field in Extraction (source of truth)
+        3. Update status to 'approved'
+        4. Set approved_at and approved_by
+        5. Commit transaction (atomic)
+        6. Invalidate cache
+        7. Return updated extraction
+
+        Args:
+            extraction_id: Extraction UUID to submit
+            corrections: List of field corrections (can be empty)
+            notes: Optional submission notes
+            submitted_by: User ID who submitted (optional, for future auth)
+
+        Returns:
+            Updated Extraction record
+
+        Raises:
+            ExtractionServiceError: If extraction not found or already submitted
+        """
+        from app.models.database.correction import Correction
+        from app.repositories.correction_repository import CorrectionRepository
+
+        logger.info(
+            f"Submitting extraction {extraction_id} " f"with {len(corrections)} corrections"
+        )
+
+        # Get extraction
+        extraction = await self.get_extraction_by_id(extraction_id)
+        if not extraction:
+            raise ExtractionServiceError(f"Extraction not found: {extraction_id}")
+
+        # Validate status
+        if extraction.status != "pending":
+            raise ExtractionServiceError(
+                f"Extraction {extraction_id} already submitted (status: {extraction.status})"
+            )
+
+        # Initialize correction repository
+        correction_repo = CorrectionRepository(self.db)
+
+        # Process corrections (if any)
+        correction_records = []
+        for correction_data in corrections:
+            field_name = correction_data.field_name
+            corrected_value = correction_data.corrected_value
+            correction_reason = correction_data.correction_reason
+
+            # Get original value
+            original_value = None
+            if field_name == "gap_insurance_premium":
+                original_value = (
+                    str(extraction.gap_insurance_premium)
+                    if extraction.gap_insurance_premium
+                    else None
+                )
+                # Update extraction field
+                extraction.gap_insurance_premium = (
+                    Decimal(corrected_value) if corrected_value else None
+                )
+            elif field_name == "refund_calculation_method":
+                original_value = extraction.refund_calculation_method
+                # Update extraction field
+                extraction.refund_calculation_method = corrected_value
+            elif field_name == "cancellation_fee":
+                original_value = (
+                    str(extraction.cancellation_fee) if extraction.cancellation_fee else None
+                )
+                # Update extraction field
+                extraction.cancellation_fee = Decimal(corrected_value) if corrected_value else None
+
+            # Create correction record
+            correction = Correction(
+                extraction_id=extraction_id,
+                field_name=field_name,
+                original_value=original_value,
+                corrected_value=corrected_value,
+                correction_reason=correction_reason,
+                corrected_by=submitted_by,
+            )
+            correction_records.append(correction)
+
+            logger.info(
+                f"Correction applied to {field_name}: " f"{original_value} -> {corrected_value}"
+            )
+
+        # Bulk create corrections
+        if correction_records:
+            await correction_repo.bulk_create(correction_records)
+            logger.info(f"Created {len(correction_records)} correction records")
+
+        # Update extraction status
+        extraction.status = "approved"
+        extraction.approved_at = datetime.utcnow()
+        extraction.approved_by = submitted_by
+
+        # Commit transaction (atomic - all or nothing)
+        await self.db.commit()
+        await self.db.refresh(extraction)
+
+        logger.info(
+            f"Extraction {extraction_id} submitted successfully "
+            f"(corrections: {len(corrections)}, status: {extraction.status})"
+        )
+
+        # Invalidate cache
+        await self.invalidate_cache(extraction.contract_id)
+
+        return extraction

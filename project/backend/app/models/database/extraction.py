@@ -92,14 +92,6 @@ class Extraction(Base):
         nullable=True,
     )
 
-    rejected_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
-    rejected_by: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("users.user_id"),
-        nullable=True,
-    )
-    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-
     # Auto-updated timestamp
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -125,7 +117,7 @@ class Extraction(Base):
     __table_args__ = (
         UniqueConstraint("contract_id", name="unique_contract_extraction"),
         CheckConstraint(
-            "status IN ('pending', 'approved', 'rejected')",
+            "status IN ('pending', 'approved')",
             name="check_extraction_status",
         ),
         CheckConstraint(
