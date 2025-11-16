@@ -19,22 +19,23 @@ export interface SearchBarProps {
 
 /**
  * Format account number with dashes
+ * Format: XXX-XXXX-XXXXX (12 digits total)
  * Examples:
- *   ACC1234567890 -> ACC-1234-567890
- *   ACC-TEST-00001 -> ACC-TEST-00001 (already formatted)
- *   acc123456 -> ACC-1234-56 (partial input)
+ *   000000000001 -> 000-0000-00001
+ *   123456789012 -> 123-4567-89012
+ *   123456 -> 123-456 (partial input)
  */
 const formatAccountNumber = (value: string): string => {
-  // Remove all dashes and convert to uppercase
-  const cleaned = value.replace(/-/g, '').toUpperCase();
+  // Remove all non-digit characters
+  const cleaned = value.replace(/\D/g, '');
 
-  // Add dashes at appropriate positions
+  // Add dashes at appropriate positions (3-4-5 pattern)
   if (cleaned.length <= 3) {
     return cleaned;
   } else if (cleaned.length <= 7) {
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
   } else {
-    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7)}`;
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 12)}`;
   }
 };
 
@@ -147,7 +148,7 @@ export const SearchBar = ({
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             placeholder={placeholder}
-            helperText={!error ? 'Format: ACC-XXXX-XXXX' : undefined}
+            helperText={!error ? 'Format: XXX-XXXX-XXXXX (12 digits)' : undefined}
             error={error}
             disabled={isLoading}
             autoFocus={autoFocus}

@@ -80,15 +80,18 @@ export interface SearchContractResponse {
 
 /**
  * Search for a contract by account number
- * @param accountNumber - The account number to search for (format: XXXX-XXXX-XXXX)
+ * @param accountNumber - The account number to search for (format: XXX-XXXX-XXXXX or 12 digits)
  * @returns Promise with contract search results
  */
 export const searchContract = async (
   accountNumber: string
 ): Promise<SearchContractResponse> => {
+  // Strip dashes - backend expects only digits
+  const cleanedAccountNumber = accountNumber.replace(/\D/g, '');
+
   // Backend expects snake_case
   const response = await apiClient.post<SearchContractResponse>('/contracts/search', {
-    account_number: accountNumber,
+    account_number: cleanedAccountNumber,
   });
   return response.data;
 };

@@ -68,14 +68,23 @@ describe('Extractions API Service', () => {
     });
   });
 
-  describe('approveExtraction', () => {
-    it('should approve extraction with user ID', async () => {
-      const { approveExtraction } = await import('@/lib/api/extractions');
+  describe('submitExtraction', () => {
+    it('should submit extraction without corrections (simple approval)', async () => {
+      const { submitExtraction } = await import('@/lib/api/extractions');
       const mockResponse: AxiosResponse = {
         data: {
-          success: true,
-          audit_id: 'AUD123',
-          message: 'Extraction approved successfully',
+          id: 'EXT123',
+          contractId: 'C123456',
+          gap_premium: 1500.00,
+          gap_premium_confidence: 95,
+          gap_premium_source: 'Page 2, Section 3',
+          refund_method: 'Pro-Rata',
+          refund_method_confidence: 92,
+          refund_method_source: 'Page 3, Section 1',
+          cancellation_fee: 50.00,
+          cancellation_fee_confidence: 88,
+          cancellation_fee_source: 'Page 1, Section 5',
+          status: 'approved',
         },
         status: 200,
         statusText: 'OK',
@@ -85,55 +94,32 @@ describe('Extractions API Service', () => {
 
       mockPost.mockResolvedValue(mockResponse);
 
-      const result = await approveExtraction('C123456', 'user123');
+      const result = await submitExtraction('EXT123', {
+        corrections: [],
+        notes: 'All values look correct',
+      });
 
-      expect(mockPost).toHaveBeenCalledWith('/contract/C123456/approve', {
-        userId: 'user123',
+      expect(mockPost).toHaveBeenCalledWith('/extractions/EXT123/submit', {
+        corrections: [],
+        notes: 'All values look correct',
       });
       expect(result).toEqual(mockResponse.data);
+      expect(result.status).toBe('approved');
     });
 
-    it('should approve extraction with corrections', async () => {
-      const { approveExtraction } = await import('@/lib/api/extractions');
-      const corrections = {
-        gap_premium: 1600.00,
-        cancellation_fee: 75.00,
-      };
-
-      mockPost.mockResolvedValue({ data: { success: true } } as AxiosResponse);
-
-      await approveExtraction('C123456', 'user123', corrections);
-
-      expect(mockPost).toHaveBeenCalledWith('/contract/C123456/approve', {
-        userId: 'user123',
-        corrections,
-      });
-    });
-
-    it('should handle approval errors', async () => {
-      const { approveExtraction } = await import('@/lib/api/extractions');
-      const error = {
-        response: {
-          status: 500,
-          data: { message: 'Failed to approve extraction' },
-        },
-      };
-
-      mockPost.mockRejectedValue(error);
-
-      await expect(approveExtraction('C123456', 'user123')).rejects.toThrow();
-    });
-  });
-
-  describe('editExtraction', () => {
-    it('should edit extraction field with new value', async () => {
-      const { editExtraction } = await import('@/lib/api/extractions');
+    it('should submit extraction with corrections', async () => {
+      const { submitExtraction } = await import('@/lib/api/extractions');
       const mockResponse: AxiosResponse = {
         data: {
-          success: true,
-          field: 'gap_premium',
-          oldValue: 1500.00,
-          newValue: 1600.00,
+          id: 'EXT123',
+          contractId: 'C123456',
+          gap_premium: 1600.00, // corrected value
+          gap_premium_confidence: 95,
+          refund_method: 'Pro-Rata',
+          refund_method_confidence: 92,
+          cancellation_fee: 75.00, // corrected value
+          cancellation_fee_confidence: 88,
+          status: 'approved',
         },
         status: 200,
         statusText: 'OK',
@@ -141,82 +127,126 @@ describe('Extractions API Service', () => {
         config: {} as any,
       };
 
-      mockPatch.mockResolvedValue(mockResponse);
+      mockPost.mockResolvedValue(mockResponse);
 
-      const result = await editExtraction('C123456', 'gap_premium', 1600.00);
+      const result = await submitExtraction('EXT123', {
+        corrections: [
+          {
+            field_name: 'gap_insurance_premium',
+            corrected_value: '1600.00',
+            correction_reason: 'OCR misread the decimal point',
+          },
+          {
+            field_name: 'cancellation_fee',
+            corrected_value: '75.00',
+            correction_reason: 'Value from page 2',
+          },
+        ],
+        notes: 'Corrected premium and fee amounts',
+      });
 
-      expect(mockPatch).toHaveBeenCalledWith('/contract/C123456/extraction', {
-        field: 'gap_premium',
-        value: 1600.00,
+      expect(mockPost).toHaveBeenCalledWith('/extractions/EXT123/submit', {
+        corrections: [
+          {
+            field_name: 'gap_insurance_premium',
+            corrected_value: '1600.00',
+            correction_reason: 'OCR misread the decimal point',
+          },
+          {
+            field_name: 'cancellation_fee',
+            corrected_value: '75.00',
+            correction_reason: 'Value from page 2',
+          },
+        ],
+        notes: 'Corrected premium and fee amounts',
       });
       expect(result).toEqual(mockResponse.data);
+      expect(result.gap_premium).toBe(1600.00);
+      expect(result.cancellation_fee).toBe(75.00);
     });
 
-    it('should edit extraction field with reason', async () => {
-      const { editExtraction } = await import('@/lib/api/extractions');
+    it('should submit extraction with corrections but no notes', async () => {
+      const { submitExtraction } = await import('@/lib/api/extractions');
+      mockPost.mockResolvedValue({
+        data: {
+          id: 'EXT123',
+          status: 'approved',
+          gap_premium: 1550.00,
+        }
+      } as AxiosResponse);
 
-      mockPatch.mockResolvedValue({ data: { success: true } } as AxiosResponse);
+      await submitExtraction('EXT123', {
+        corrections: [
+          {
+            field_name: 'gap_insurance_premium',
+            corrected_value: '1550.00',
+          },
+        ],
+      });
 
-      await editExtraction('C123456', 'gap_premium', 1600.00, 'Corrected from contract PDF');
-
-      expect(mockPatch).toHaveBeenCalledWith('/contract/C123456/extraction', {
-        field: 'gap_premium',
-        value: 1600.00,
-        reason: 'Corrected from contract PDF',
+      expect(mockPost).toHaveBeenCalledWith('/extractions/EXT123/submit', {
+        corrections: [
+          {
+            field_name: 'gap_insurance_premium',
+            corrected_value: '1550.00',
+          },
+        ],
       });
     });
 
-    it('should handle edit errors', async () => {
-      const { editExtraction } = await import('@/lib/api/extractions');
+    it('should handle submission errors (extraction not found)', async () => {
+      const { submitExtraction } = await import('@/lib/api/extractions');
+      const error = {
+        response: {
+          status: 404,
+          data: { message: 'Extraction not found' },
+        },
+      };
+
+      mockPost.mockRejectedValue(error);
+
+      await expect(
+        submitExtraction('INVALID', { corrections: [] })
+      ).rejects.toThrow();
+    });
+
+    it('should handle submission errors (already submitted)', async () => {
+      const { submitExtraction } = await import('@/lib/api/extractions');
       const error = {
         response: {
           status: 400,
-          data: { message: 'Invalid field value' },
-        },
-      };
-
-      mockPatch.mockRejectedValue(error);
-
-      await expect(editExtraction('C123456', 'gap_premium', -100)).rejects.toThrow();
-    });
-  });
-
-  describe('rejectExtraction', () => {
-    it('should reject extraction with reason', async () => {
-      const { rejectExtraction } = await import('@/lib/api/extractions');
-      const mockResponse: AxiosResponse = {
-        data: {
-          success: true,
-          message: 'Extraction rejected',
-        },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      };
-
-      mockPost.mockResolvedValue(mockResponse);
-
-      const result = await rejectExtraction('C123456', 'Incorrect data extraction');
-
-      expect(mockPost).toHaveBeenCalledWith('/contract/C123456/reject', {
-        reason: 'Incorrect data extraction',
-      });
-      expect(result).toEqual(mockResponse.data);
-    });
-
-    it('should handle rejection errors', async () => {
-      const { rejectExtraction } = await import('@/lib/api/extractions');
-      const error = {
-        response: {
-          status: 500,
-          data: { message: 'Failed to reject extraction' },
+          data: { message: 'Extraction already submitted' },
         },
       };
 
       mockPost.mockRejectedValue(error);
 
-      await expect(rejectExtraction('C123456', 'Bad data')).rejects.toThrow();
+      await expect(
+        submitExtraction('EXT123', { corrections: [] })
+      ).rejects.toThrow();
+    });
+
+    it('should handle submission errors (validation error)', async () => {
+      const { submitExtraction } = await import('@/lib/api/extractions');
+      const error = {
+        response: {
+          status: 400,
+          data: { message: 'Invalid field name' },
+        },
+      };
+
+      mockPost.mockRejectedValue(error);
+
+      await expect(
+        submitExtraction('EXT123', {
+          corrections: [
+            {
+              field_name: 'invalid_field' as any,
+              corrected_value: 'test',
+            },
+          ],
+        })
+      ).rejects.toThrow();
     });
   });
 

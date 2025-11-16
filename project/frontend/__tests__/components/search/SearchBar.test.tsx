@@ -34,7 +34,7 @@ describe('SearchBar Component', () => {
     it('should render with helper text showing expected format', () => {
       render(<SearchBar />);
 
-      expect(screen.getByText(/format: ACC-XXXX-XXXX/i)).toBeInTheDocument();
+      expect(screen.getByText(/format: XXX-XXXX-XXXXX/i)).toBeInTheDocument();
     });
 
     it('should auto-focus input when autoFocus prop is true', () => {
@@ -51,9 +51,9 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000000000001');
 
-      expect(input).toHaveValue('ACC-TEST-00001');
+      expect(input).toHaveValue('000-0000-00001');
     });
 
     it('should show error for empty input when trying to search', async () => {
@@ -82,7 +82,7 @@ describe('SearchBar Component', () => {
       const input = screen.getByRole('textbox', { name: /account number/i });
       const button = screen.getByRole('button', { name: /search/i });
 
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000000000001');
 
       expect(button).toBeEnabled();
     });
@@ -91,7 +91,7 @@ describe('SearchBar Component', () => {
       const user = userEvent.setup();
       const mockResponse = {
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       };
 
@@ -101,7 +101,7 @@ describe('SearchBar Component', () => {
 
       const input = screen.getByRole('textbox', { name: /account number/i });
       // Type the account number (formatter will handle it)
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000000000001');
 
       // Manually add whitespace to the value (simulating trailing spaces)
       // This tests the trim logic in handleSubmit
@@ -109,8 +109,8 @@ describe('SearchBar Component', () => {
       await user.click(button);
 
       await waitFor(() => {
-        // Verify API was called with trimmed value
-        expect(contractsApi.searchContract).toHaveBeenCalledWith('ACC-TEST-00001');
+        // Verify API was called with formatted value (dashes will be stripped inside searchContract)
+        expect(contractsApi.searchContract).toHaveBeenCalledWith('000-0000-00001');
       });
     });
   });
@@ -122,11 +122,11 @@ describe('SearchBar Component', () => {
 
       const input = screen.getByRole('textbox', { name: /account number/i });
 
-      // Type without dashes
-      await user.type(input, 'ACC1234567890');
+      // Type without dashes (12 digits)
+      await user.type(input, '123456789012');
 
-      // Should auto-format with dashes
-      expect(input).toHaveValue('ACC-1234-567890');
+      // Should auto-format with dashes (3-4-5 pattern)
+      expect(input).toHaveValue('123-4567-89012');
     });
 
     it('should handle account number that already has dashes', async () => {
@@ -134,19 +134,20 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
-      expect(input).toHaveValue('ACC-TEST-00001');
+      expect(input).toHaveValue('000-0000-00001');
     });
 
-    it('should convert to uppercase', async () => {
+    it('should strip non-numeric characters', async () => {
       const user = userEvent.setup();
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'acc-test-00001');
+      await user.type(input, 'abc123def456ghi789jkl012');
 
-      expect(input).toHaveValue('ACC-TEST-00001');
+      // Only digits should remain, formatted as 3-4-5
+      expect(input).toHaveValue('123-4567-89012');
     });
 
     it('should handle partial input during typing', async () => {
@@ -155,12 +156,14 @@ describe('SearchBar Component', () => {
 
       const input = screen.getByRole('textbox', { name: /account number/i });
 
-      await user.type(input, 'ACC12');
-      expect(input).toHaveValue('ACC-12');
+      // Type 5 digits
+      await user.type(input, '12345');
+      expect(input).toHaveValue('123-45');
 
       await user.clear(input);
-      await user.type(input, 'ACC123456');
-      expect(input).toHaveValue('ACC-1234-56');
+      // Type 8 digits
+      await user.type(input, '12345678');
+      expect(input).toHaveValue('123-4567-8');
     });
   });
 
@@ -169,7 +172,7 @@ describe('SearchBar Component', () => {
       const user = userEvent.setup();
       const mockResponse = {
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       };
 
@@ -178,12 +181,12 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
 
-      expect(contractsApi.searchContract).toHaveBeenCalledWith('ACC-TEST-00001');
+      expect(contractsApi.searchContract).toHaveBeenCalledWith('000-0000-00001');
     });
 
     it('should show loading state during API call', async () => {
@@ -200,7 +203,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
@@ -213,7 +216,7 @@ describe('SearchBar Component', () => {
       // Resolve the promise to finish the test
       resolvePromise!({
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       });
     });
@@ -231,7 +234,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
@@ -240,7 +243,7 @@ describe('SearchBar Component', () => {
 
       resolvePromise!({
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       });
     });
@@ -252,7 +255,7 @@ describe('SearchBar Component', () => {
       const onSuccess = vi.fn();
       const mockResponse = {
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       };
 
@@ -261,13 +264,13 @@ describe('SearchBar Component', () => {
       render(<SearchBar onSuccess={onSuccess} />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
 
       await waitFor(() => {
-        expect(onSuccess).toHaveBeenCalledWith('GAP-2024-0001');
+        expect(onSuccess).toHaveBeenCalledWith(mockResponse);
       });
     });
 
@@ -275,7 +278,7 @@ describe('SearchBar Component', () => {
       const user = userEvent.setup();
       const mockResponse = {
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       };
 
@@ -287,7 +290,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
@@ -310,7 +313,7 @@ describe('SearchBar Component', () => {
       const user = userEvent.setup();
       const mockResponse = {
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       };
 
@@ -321,7 +324,7 @@ describe('SearchBar Component', () => {
       const input = screen.getByRole('textbox', { name: /account number/i });
       const button = screen.getByRole('button', { name: /search/i });
 
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
       await user.click(button);
 
       await waitFor(() => {
@@ -335,7 +338,7 @@ describe('SearchBar Component', () => {
     it('should display error message when contract not found (404)', async () => {
       const user = userEvent.setup();
       const notFoundError = new ApiError(
-        'Contract not found for account number: ACC-NOT-FOUND',
+        'Contract not found for account number: 999999999999',
         404
       );
 
@@ -344,7 +347,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-NOT-FOUND');
+      await user.type(input, '999999999999');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
@@ -366,7 +369,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
@@ -385,7 +388,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
@@ -405,7 +408,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar onError={onError} />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-NOT-FOUND');
+      await user.type(input, '999999999999');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
@@ -442,7 +445,7 @@ describe('SearchBar Component', () => {
       const onSearch = vi.fn();
       const mockResponse = {
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       };
 
@@ -451,10 +454,10 @@ describe('SearchBar Component', () => {
       render(<SearchBar onSearch={onSearch} />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001{Enter}');
+      await user.type(input, '000-0000-00001{Enter}');
 
       await waitFor(() => {
-        expect(contractsApi.searchContract).toHaveBeenCalledWith('ACC-TEST-00001');
+        expect(contractsApi.searchContract).toHaveBeenCalledWith('000-0000-00001');
       });
     });
 
@@ -475,7 +478,7 @@ describe('SearchBar Component', () => {
       const input = screen.getByRole('textbox', { name: /account number/i });
 
       // Type something to enable the button
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
 
@@ -558,7 +561,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const button = screen.getByRole('button', { name: /search/i });
       await user.click(button);
@@ -567,7 +570,7 @@ describe('SearchBar Component', () => {
 
       resolvePromise!({
         contractId: 'GAP-2024-0001',
-        accountNumber: 'ACC-TEST-00001',
+        accountNumber: '000000000001',
         status: 'pending',
       });
     });
@@ -579,7 +582,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
     });
@@ -589,7 +592,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-TEST-00001');
+      await user.type(input, '000-0000-00001');
 
       const clearButton = screen.getByRole('button', { name: /clear/i });
       await user.click(clearButton);
@@ -606,7 +609,7 @@ describe('SearchBar Component', () => {
       render(<SearchBar />);
 
       const input = screen.getByRole('textbox', { name: /account number/i });
-      await user.type(input, 'ACC-NOT-FOUND');
+      await user.type(input, '999999999999');
 
       const searchButton = screen.getByRole('button', { name: /search/i });
       await user.click(searchButton);

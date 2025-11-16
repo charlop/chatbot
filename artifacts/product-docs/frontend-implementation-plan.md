@@ -61,6 +61,11 @@ This document breaks down the frontend implementation into manageable 8-hour wor
   - Search results handling
   - Integration with dashboard
 
+- **Day 7.5**: Backend API Updates (after Day 7)
+  - Update API client for simplified submission workflow
+  - Remove approve/reject/edit endpoints
+  - Add single submit endpoint with corrections support
+
 ### Overall Progress
 
 - **Days Completed**: 4 of 20 (20%)
@@ -398,9 +403,49 @@ This document breaks down the frontend implementation into manageable 8-hour wor
 
 ---
 
+### Day 7.5 (4 hours): Backend API Updates for Simplified Workflow
+
+**Status:** 🔄 **REQUIRED** - Backend Day 7 changes require frontend updates
+**Goals**: Update API client to match simplified backend submission workflow
+
+**Background:**
+Backend Day 7 simplified the approval workflow:
+- ❌ Removed: Separate `/approve`, `/reject`, `/edit` endpoints
+- ✅ Added: Single `/submit` endpoint that handles approval + optional corrections
+- ✅ Corrections stored in `corrections` table AND update `extractions` table
+
+**Tasks:**
+1. **Update API Service** (2 hours)
+   - Update `lib/api/extractions.ts`
+   - Remove: `approveExtraction()`, `rejectExtraction()`, `editExtraction()` methods
+   - Add: `submitExtraction(extractionId, corrections[], notes?)` method
+   - Update TypeScript types for new request/response format
+   - Write tests for new submit method
+
+2. **Update SWR Hook** (1 hour)
+   - Update `hooks/useExtraction.ts`
+   - Remove rejection-related state
+   - Add submit mutation with optimistic updates
+   - Handle correction submission in hook
+
+3. **Update Types** (1 hour)
+   - Create `types/extraction.ts` interface for corrections array
+   - Update `ExtractionResponse` type to remove rejection fields
+   - Add `CorrectionInput` type for field corrections
+
+**Deliverables:**
+- ✅ Updated API client with submit endpoint
+- ✅ Simplified extraction hook
+- ✅ Updated TypeScript types
+- ✅ Tests passing for API changes
+
+**Note:** This work prepares the API layer for Days 8-9 UI implementation.
+
+---
+
 ### Day 8 (8 hours): Data Display Components
 
-**Goals**: Build components for displaying extracted data
+**Goals**: Build components for displaying extracted data with inline editing
 
 **Tasks:**
 1. **ConfidenceBadge Component** (1 hour)
@@ -410,39 +455,42 @@ This document breaks down the frontend implementation into manageable 8-hour wor
    - Add tooltip with explanation
 
 2. **DataCard Component** (3 hours)
-   - Write tests for data display, edit mode
+   - Write tests for data display, inline edit mode
    - Implement `components/extraction/DataCard.tsx`
    - Display label, value, confidence badge
    - Add source location link
    - Add "View in document" button
-   - Add "Edit" button
+   - Add inline edit mode (click to edit)
+   - Track if field has been edited
 
-3. **DataPanel Component** (2 hours)
-   - Write tests for panel layout
+3. **DataPanel Component** (3 hours)
+   - Write tests for panel layout and state management
    - Implement `components/extraction/DataPanel.tsx` (464px width)
-   - Display all 3 data cards
+   - Display all 3 data cards with edit capability
+   - Track all field corrections in state
    - Add spacing between cards
    - Make scrollable if needed
+   - Add "Submit" button at bottom (replaces separate Approve/Reject)
+   - Show corrections summary before submit
 
-4. **EditField Component** (2 hours)
-   - Write tests for inline editing
-   - Implement `components/extraction/EditField.tsx`
-   - Add input field with validation
-   - Add save/cancel buttons
-   - Add optional reason textarea
-   - Handle optimistic updates
+4. **Submit Modal** (1 hour)
+   - Write tests for submit confirmation
+   - Implement submit confirmation modal
+   - Show summary of changes (if any corrections made)
+   - Add optional notes field
+   - Handle submit with corrections
 
 **Deliverables:**
 - ✅ `components/extraction/ConfidenceBadge.tsx` with tests
-- ✅ `components/extraction/DataCard.tsx` with tests
-- ✅ `components/extraction/DataPanel.tsx` with tests
-- ✅ `components/extraction/EditField.tsx` with tests
+- ✅ `components/extraction/DataCard.tsx` with inline editing
+- ✅ `components/extraction/DataPanel.tsx` with submit functionality
+- ✅ Submit modal with corrections summary
 
 ---
 
-### Day 9 (8 hours): Audit Trail & Action Buttons
+### Day 9 (8 hours): Audit Trail & Submission Integration
 
-**Goals**: Display audit information and implement approval actions
+**Goals**: Display audit information and complete submission flow
 
 **Tasks:**
 1. **AuditTrail Component** (2 hours)
@@ -453,14 +501,15 @@ This document breaks down the frontend implementation into manageable 8-hour wor
    - Display corrections made (if any)
    - Format timestamps nicely
 
-2. **Action Buttons** (3 hours)
-   - Write tests for approve, reject actions
-   - Implement action buttons in DataPanel
-   - Add "Approve" button (green, primary)
-   - Add "Reject" button (red, outline)
-   - Add confirmation modals
+2. **Submit Action Logic** (3 hours)
+   - Write tests for submit action with/without corrections
+   - Implement submit handler in DataPanel
+   - Collect all field corrections
+   - Call submit API with corrections array
+   - Add confirmation modal
    - Handle loading states
    - Show success/error toasts
+   - Update UI after successful submit
 
 3. **Contract Context** (2 hours)
    - Write tests for ContractContext
@@ -468,16 +517,19 @@ This document breaks down the frontend implementation into manageable 8-hour wor
    - Store current contract state
    - Store extraction data
    - Provide update methods
+   - Track submission state
 
 4. **Integration** (1 hour)
    - Wire up all components with context
-   - Test complete flow (search → view → approve)
+   - Test complete flow (search → view → edit → submit)
+   - Test submit without edits (simple approval)
+   - Test submit with corrections
 
 **Deliverables:**
 - ✅ `components/audit/AuditTrail.tsx` with tests
-- ✅ Action buttons with confirmations
+- ✅ Submit button with corrections handling
 - ✅ `contexts/ContractContext.tsx` with tests
-- ✅ End-to-end approval flow working
+- ✅ End-to-end submission flow working
 
 ---
 
@@ -496,6 +548,7 @@ This document breaks down the frontend implementation into manageable 8-hour wor
    - Handle loading states
    - Handle error states
    - Add skeleton loaders
+   - Manage submission state
 
 3. **PDF-to-Data Linking** (2 hours)
    - Implement "View in document" functionality
@@ -505,14 +558,14 @@ This document breaks down the frontend implementation into manageable 8-hour wor
 
 4. **Polish & Testing** (1 hour)
    - Fix any styling issues
-   - Test complete user flow
-   - Write E2E test for happy path
+   - Test complete user flow (search → view → edit → submit)
+   - Write E2E test for happy path (with and without corrections)
 
 **Deliverables:**
 - ✅ Complete dashboard view functional
 - ✅ All components integrated
 - ✅ PDF-data linking working
-- ✅ E2E test passing
+- ✅ E2E test passing (submit flow)
 
 ---
 
@@ -750,10 +803,11 @@ This document breaks down the frontend implementation into manageable 8-hour wor
    - Test PDF loading
    - Test data display
 
-3. **Approval Flow** (2 hours)
-   - Test editing extraction
-   - Test approving extraction
-   - Test rejecting extraction
+3. **Submission Flow** (2 hours)
+   - Test viewing extraction data
+   - Test inline field editing
+   - Test submitting without corrections (simple approval)
+   - Test submitting with corrections
    - Test error handling
 
 4. **Admin Flow** (2 hours)
@@ -778,16 +832,18 @@ This document breaks down the frontend implementation into manageable 8-hour wor
    - Set up test fixtures
    - Set up mock auth
 
-2. **Happy Path Test** (3 hours)
-   - Test: Login → Search → View → Approve
+2. **Happy Path Tests** (3 hours)
+   - Test: Login → Search → View → Submit (no corrections)
+   - Test: Login → Search → View → Edit → Submit (with corrections)
    - Test with real API (or comprehensive mocks)
    - Verify all UI elements present
-   - Verify data persistence
+   - Verify data persistence (corrections saved)
 
 3. **Error Path Tests** (2 hours)
    - Test: Contract not found
    - Test: API error during search
-   - Test: Network failure during approval
+   - Test: Network failure during submission
+   - Test: Validation errors in corrections
 
 4. **Admin E2E Test** (2 hours)
    - Test: Admin login → User management → Create user
@@ -886,9 +942,10 @@ This document breaks down the frontend implementation into manageable 8-hour wor
 ### Week 7: Contract Display (Days 6-10)
 - [ ] Day 6: Search functionality
 - [ ] Day 7: PDF viewer with highlighting
-- [ ] Day 8: Data display components (ConfidenceBadge, DataCard, DataPanel, EditField)
-- [ ] Day 9: Audit trail, action buttons, contract context
-- [ ] Day 10: Dashboard integration, PDF-data linking
+- [ ] Day 7.5: Backend API updates (simplified submission workflow)
+- [ ] Day 8: Data display components with inline editing (ConfidenceBadge, DataCard, DataPanel, Submit Modal)
+- [ ] Day 9: Audit trail, submit action with corrections, contract context
+- [ ] Day 10: Dashboard integration, PDF-data linking, submission flow
 
 ### Week 8: Chat & Admin (Days 11-15)
 - [ ] Day 11: Chat interface - basic
@@ -980,6 +1037,7 @@ This document breaks down the frontend implementation into manageable 8-hour wor
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-11-06 | Claude Code | Initial frontend implementation plan with 20-day breakdown |
+| 1.1 | 2025-11-16 | Claude Code | Added Day 7.5 for simplified submission workflow. Updated Days 8-10, 17-18 to remove rejection flow and use single submit endpoint with optional corrections. |
 
 ---
 

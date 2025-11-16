@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 
 // Mock the extractions API
 const mockGetExtraction = vi.fn();
+const mockSubmitExtraction = vi.fn();
 
 vi.mock('@/lib/api/extractions', () => ({
   getExtraction: mockGetExtraction,
+  submitExtraction: mockSubmitExtraction,
 }));
 
 // Wrapper component to provide SWR config
@@ -115,5 +117,158 @@ describe('useExtraction Hook', () => {
     });
 
     expect(result.current.isValidating).toBeDefined();
+  });
+
+  it('should provide submit function', async () => {
+    const { useExtraction } = await import('@/hooks/useExtraction');
+    const mockData = {
+      id: 'EXT123',
+      contractId: 'C123456',
+      gap_premium: 1500.00,
+      refund_method: 'Pro-Rata',
+      cancellation_fee: 50.00,
+      status: 'pending' as const,
+    };
+
+    mockGetExtraction.mockResolvedValue(mockData);
+
+    const { result } = renderHook(() => useExtraction('C123456'), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockData);
+    });
+
+    expect(result.current.submit).toBeDefined();
+    expect(typeof result.current.submit).toBe('function');
+  });
+
+  it('should submit extraction without corrections', async () => {
+    const { useExtraction } = await import('@/hooks/useExtraction');
+    const mockData = {
+      id: 'EXT123',
+      contractId: 'C123456',
+      gap_premium: 1500.00,
+      refund_method: 'Pro-Rata',
+      cancellation_fee: 50.00,
+      status: 'pending' as const,
+    };
+
+    const mockSubmittedData = {
+      ...mockData,
+      status: 'approved' as const,
+    };
+
+    mockGetExtraction.mockResolvedValue(mockData);
+    mockSubmitExtraction.mockResolvedValue(mockSubmittedData);
+
+    const { result } = renderHook(() => useExtraction('C123456'), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockData);
+    });
+
+    // Submit without corrections
+    await act(async () => {
+      await result.current.submit({
+        corrections: [],
+        notes: 'All values look correct',
+      });
+    });
+
+    // Verify the API was called correctly
+    expect(mockSubmitExtraction).toHaveBeenCalledWith('EXT123', {
+      corrections: [],
+      notes: 'All values look correct',
+    });
+  });
+
+  it('should submit extraction with corrections', async () => {
+    const { useExtraction } = await import('@/hooks/useExtraction');
+    const mockData = {
+      id: 'EXT123',
+      contractId: 'C123456',
+      gap_premium: 1500.00,
+      refund_method: 'Pro-Rata',
+      cancellation_fee: 50.00,
+      status: 'pending' as const,
+    };
+
+    const mockSubmittedData = {
+      ...mockData,
+      gap_premium: 1600.00,
+      status: 'approved' as const,
+    };
+
+    mockGetExtraction.mockResolvedValue(mockData);
+    mockSubmitExtraction.mockResolvedValue(mockSubmittedData);
+
+    const { result } = renderHook(() => useExtraction('C123456'), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockData);
+    });
+
+    // Submit with corrections
+    await act(async () => {
+      await result.current.submit({
+        corrections: [
+          {
+            field_name: 'gap_insurance_premium',
+            corrected_value: '1600.00',
+            correction_reason: 'OCR misread decimal',
+          },
+        ],
+        notes: 'Corrected premium',
+      });
+    });
+
+    // Verify the API was called correctly with corrections
+    expect(mockSubmitExtraction).toHaveBeenCalledWith('EXT123', {
+      corrections: [
+        {
+          field_name: 'gap_insurance_premium',
+          corrected_value: '1600.00',
+          correction_reason: 'OCR misread decimal',
+        },
+      ],
+      notes: 'Corrected premium',
+    });
+  });
+
+  it('should throw error when submitting without loaded data', async () => {
+    const { useExtraction } = await import('@/hooks/useExtraction');
+
+    const { result } = renderHook(() => useExtraction(null), { wrapper });
+
+    await expect(
+      result.current.submit({ corrections: [] })
+    ).rejects.toThrow('Cannot submit: extraction data not loaded');
+  });
+
+  it('should handle submit errors gracefully', async () => {
+    const { useExtraction } = await import('@/hooks/useExtraction');
+    const mockData = {
+      id: 'EXT123',
+      contractId: 'C123456',
+      gap_premium: 1500.00,
+      refund_method: 'Pro-Rata',
+      cancellation_fee: 50.00,
+      status: 'pending' as const,
+    };
+
+    mockGetExtraction.mockResolvedValue(mockData);
+    mockSubmitExtraction.mockRejectedValue(new Error('Submission failed'));
+
+    const { result } = renderHook(() => useExtraction('C123456'), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockData);
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.submit({ corrections: [] })
+      ).rejects.toThrow('Submission failed');
+    });
   });
 });

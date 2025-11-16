@@ -18,12 +18,12 @@ describe('Contracts API Service', () => {
   });
 
   describe('searchContract', () => {
-    it('should search for a contract by account number', async () => {
+    it('should search for a contract by account number and strip dashes', async () => {
       const { searchContract } = await import('@/lib/api/contracts');
       const mockResponse: AxiosResponse = {
         data: {
           contractId: 'C123456',
-          accountNumber: '1234-5678-9012',
+          accountNumber: '123456789012',
           status: 'active',
         },
         status: 200,
@@ -34,10 +34,12 @@ describe('Contracts API Service', () => {
 
       mockPost.mockResolvedValue(mockResponse);
 
-      const result = await searchContract('1234-5678-9012');
+      // Call with formatted value (with dashes)
+      const result = await searchContract('123-4567-89012');
 
+      // Should strip dashes before sending to API
       expect(mockPost).toHaveBeenCalledWith('/contracts/search', {
-        account_number: '1234-5678-9012',
+        account_number: '123456789012',
       });
       expect(result).toEqual(mockResponse.data);
     });
@@ -53,15 +55,19 @@ describe('Contracts API Service', () => {
 
       mockPost.mockRejectedValue(error);
 
-      await expect(searchContract('0000-0000-0000')).rejects.toThrow();
+      await expect(searchContract('000-0000-00000')).rejects.toThrow();
     });
 
-    it('should validate account number format', async () => {
+    it('should handle account numbers without dashes', async () => {
       const { searchContract } = await import('@/lib/api/contracts');
 
-      // Should not throw for valid format
+      // Should work with unformatted input too
       mockPost.mockResolvedValue({ data: {} } as AxiosResponse);
-      await expect(searchContract('1234-5678-9012')).resolves.toBeDefined();
+      await searchContract('123456789012');
+
+      expect(mockPost).toHaveBeenCalledWith('/contracts/search', {
+        account_number: '123456789012',
+      });
     });
   });
 
@@ -71,7 +77,7 @@ describe('Contracts API Service', () => {
       const mockResponse: AxiosResponse = {
         data: {
           id: 'C123456',
-          accountNumber: '1234-5678-9012',
+          accountNumber: '123456789012',
           pdfUrl: 'https://example.com/contract.pdf',
           extracted_data: {
             gap_premium: 1500.00,
@@ -94,7 +100,7 @@ describe('Contracts API Service', () => {
 
       const result = await getContract('C123456');
 
-      expect(mockGet).toHaveBeenCalledWith('/contract/C123456');
+      expect(mockGet).toHaveBeenCalledWith('/contracts/C123456');
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -133,7 +139,7 @@ describe('Contracts API Service', () => {
       const mockResponse: AxiosResponse = {
         data: {
           id: 'C123456',
-          accountNumber: '1234-5678-9012',
+          accountNumber: '123456789012',
           pdfUrl: 'https://example.com/contract.pdf',
           extracted_data: {
             gap_premium: 1500.00,

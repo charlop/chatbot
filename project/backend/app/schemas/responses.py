@@ -44,8 +44,8 @@ class ContractResponse(BaseModel):
     updated_at: datetime
     last_synced_at: datetime | None = None
 
-    # NOTE: Extraction relationship will be added in Day 6
-    # extraction: ExtractionResponse | None = None
+    # Extracted data (flattened for frontend compatibility)
+    extracted_data: dict | None = None
 
     model_config = ConfigDict(
         from_attributes=True,  # Allow creating from ORM models
