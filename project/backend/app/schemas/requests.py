@@ -3,6 +3,7 @@ Pydantic request schemas for API endpoints.
 Handles request validation and serialization.
 """
 
+import re
 from typing import List
 from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
@@ -16,25 +17,38 @@ class ContractSearchRequest(BaseModel):
 
     account_number: str = Field(
         ...,
-        min_length=1,
-        max_length=100,
-        description="Account number to search for",
+        min_length=12,
+        max_length=12,
+        description="Account number to search for (12 digits, e.g., 000000000001)",
     )
 
     @field_validator("account_number")
     @classmethod
     def validate_account_number(cls, v: str) -> str:
-        """Validate account number is not empty and trim whitespace."""
+        """
+        Validate account number is exactly 12 digits.
+        Format: 12 numeric digits (e.g., 000000000001)
+        """
         v = v.strip()
+
+        # Check if empty
         if not v:
             raise ValueError("Account number cannot be empty or whitespace")
+
+        # Check if exactly 12 digits
+        if not re.match(r"^[0-9]{12}$", v):
+            raise ValueError(
+                "Account number must be exactly 12 digits (e.g., 000000000001). "
+                f"Got '{v}' with length {len(v)}"
+            )
+
         return v
 
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {"account_number": "ACC-12345"},
-                {"account_number": "GAP-2023-001"},
+                {"account_number": "000000000001"},
+                {"account_number": "123456789012"},
             ]
         }
     }
