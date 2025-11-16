@@ -1,8 +1,49 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
+import { SearchBar } from '@/components/search/SearchBar';
+import { RecentSearches } from '@/components/search/RecentSearches';
+import { SearchResults } from '@/components/search/SearchResults';
+import { SearchContractResponse } from '@/lib/api/contracts';
 
 export default function Dashboard() {
+  const router = useRouter();
+  const [searchValue, setSearchValue] = useState('');
+  const [refreshRecentSearches, setRefreshRecentSearches] = useState(0);
+  const [searchResult, setSearchResult] = useState<SearchContractResponse | null>(null);
+
+  const handleSearchSuccess = (result: SearchContractResponse) => {
+    // Store the search result to display
+    setSearchResult(result);
+
+    // Refresh recent searches to show the new search
+    setRefreshRecentSearches((prev) => prev + 1);
+  };
+
+  const handleNewSearch = () => {
+    // Clear the search result and reset the search value
+    setSearchResult(null);
+    setSearchValue('');
+  };
+
+  const handleViewDetails = (contractId: string) => {
+    // Navigate to contract details page
+    router.push(`/contracts/${contractId}`);
+  };
+
+  const handleRecentSearchSelect = (accountNumber: string) => {
+    // Pre-populate search bar with selected account number
+    setSearchValue(accountNumber);
+    // Optionally trigger search automatically
+    // For now, just populate the field so user can review and click Search
+  };
+
+  const handleRecentSearchesClear = () => {
+    setRefreshRecentSearches((prev) => prev + 1);
+  };
+
   return (
     <Layout title="Dashboard">
       <div className="max-w-7xl mx-auto">
@@ -14,6 +55,32 @@ export default function Dashboard() {
           <p className="text-neutral-600 dark:text-neutral-400">
             Search for a contract to begin the refund eligibility review process.
           </p>
+        </div>
+
+        {/* Search Section */}
+        <div className="mb-8 max-w-2xl">
+          {!searchResult ? (
+            <>
+              <SearchBar
+                value={searchValue}
+                onChange={setSearchValue}
+                onSuccess={handleSearchSuccess}
+                placeholder="Enter account number (e.g., ACC-TEST-00001)"
+                autoFocus
+              />
+              <RecentSearches
+                key={refreshRecentSearches}
+                onSelect={handleRecentSearchSelect}
+                onClear={handleRecentSearchesClear}
+              />
+            </>
+          ) : (
+            <SearchResults
+              result={searchResult}
+              onNewSearch={handleNewSearch}
+              onViewDetails={() => handleViewDetails(searchResult.contractId)}
+            />
+          )}
         </div>
 
         {/* Quick Stats */}

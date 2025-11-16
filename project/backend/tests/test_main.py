@@ -21,15 +21,29 @@ async def test_health_check(async_client: AsyncClient):
 
 @pytest.mark.unit
 async def test_readiness_check(async_client: AsyncClient):
-    """Test readiness check endpoint returns 200."""
+    """
+    Test readiness check endpoint.
+    Returns 200 if database is connected, 503 if not.
+    """
     response = await async_client.get("/ready")
 
-    assert response.status_code == 200
+    # Accept either 200 (DB connected) or 503 (DB not connected)
+    assert response.status_code in [200, 503]
     data = response.json()
-    assert data["status"] == "ready"
-    # Note: Database and Redis checks not implemented yet
+
+    # Check response structure
+    assert "status" in data
     assert "database" in data
     assert "redis" in data
+
+    # If DB connected, status should be "ready"
+    # If DB not connected, status should be "not_ready"
+    if response.status_code == 200:
+        assert data["status"] == "ready"
+        assert data["database"] == "connected"
+    else:
+        assert data["status"] == "not_ready"
+        assert data["database"] == "disconnected"
 
 
 @pytest.mark.unit

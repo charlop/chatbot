@@ -36,8 +36,8 @@ describe('Contracts API Service', () => {
 
       const result = await searchContract('1234-5678-9012');
 
-      expect(mockPost).toHaveBeenCalledWith('/search', {
-        accountNumber: '1234-5678-9012',
+      expect(mockPost).toHaveBeenCalledWith('/contracts/search', {
+        account_number: '1234-5678-9012',
       });
       expect(result).toEqual(mockResponse.data);
     });

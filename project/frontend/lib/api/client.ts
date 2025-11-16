@@ -47,10 +47,40 @@ const transformError = (error: AxiosError): ApiError => {
 };
 
 /**
+ * Transform snake_case keys to camelCase recursively
+ * Backend uses snake_case (Python convention) but frontend uses camelCase (JavaScript convention)
+ */
+function toCamelCase(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => toCamelCase(item));
+  }
+
+  if (typeof obj === 'object' && obj.constructor === Object) {
+    const newObj: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        // Convert snake_case to camelCase
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) =>
+          letter.toUpperCase()
+        );
+        newObj[camelKey] = toCamelCase(obj[key]);
+      }
+    }
+    return newObj;
+  }
+
+  return obj;
+}
+
+/**
  * Create and configure the Axios instance
  */
 const createApiClient = (): AxiosInstance => {
-  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001/api/v1';
 
   const client = axios.create({
     baseURL,
@@ -88,6 +118,11 @@ const createApiClient = (): AxiosInstance => {
         const duration = Date.now() - config.metadata.startTime;
         // Could send to analytics/monitoring
         console.debug(`Request to ${response.config.url} took ${duration}ms`);
+      }
+
+      // Transform response data from snake_case to camelCase
+      if (response.data) {
+        response.data = toCamelCase(response.data);
       }
 
       return response;

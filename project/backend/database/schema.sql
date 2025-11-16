@@ -251,9 +251,8 @@ CREATE INDEX idx_audit_events_timestamp ON audit_events(timestamp);
 CREATE INDEX idx_audit_events_event_type ON audit_events(event_type);
 CREATE INDEX idx_audit_events_session_id ON audit_events(session_id);
 
--- Partial index for recent events (last 30 days) - faster queries
-CREATE INDEX idx_audit_events_recent ON audit_events(timestamp DESC)
-    WHERE timestamp > CURRENT_TIMESTAMP - INTERVAL '30 days';
+-- Partial index for recent events removed due to CURRENT_TIMESTAMP immutability issue
+-- Can be added later with a different approach if needed
 
 -- Prevent updates and deletes on audit_events (immutable log)
 CREATE OR REPLACE FUNCTION prevent_audit_modification()
