@@ -72,17 +72,54 @@ ON CONFLICT (auth_provider_user_id) DO NOTHING;
 -- =============================================================================
 
 -- Sample GAP contracts
-INSERT INTO contracts (contract_id, account_number, pdf_url, document_repository_id, contract_type, contract_date, customer_name, vehicle_info) VALUES
-    ('GAP-2024-001001', 'ACC-100001', 'https://docs.example.com/contracts/GAP-2024-001001.pdf', 'DOC-001001', 'GAP', '2024-01-15', 'Customer #100001', '{"make": "Toyota", "model": "Camry", "year": 2023, "vin": "1HGBH41JXMN109186"}'),
-    ('GAP-2024-001002', 'ACC-100002', 'https://docs.example.com/contracts/GAP-2024-001002.pdf', 'DOC-001002', 'GAP', '2024-01-20', 'Customer #100002', '{"make": "Honda", "model": "Accord", "year": 2023, "vin": "19XFB2F59CE000001"}'),
-    ('GAP-2024-001003', 'ACC-100003', 'https://docs.example.com/contracts/GAP-2024-001003.pdf', 'DOC-001003', 'GAP', '2024-02-10', 'Customer #100003', '{"make": "Ford", "model": "F-150", "year": 2024, "vin": "1FTFW1E80MFC10001"}'),
-    ('GAP-2024-001004', 'ACC-100004', 'https://docs.example.com/contracts/GAP-2024-001004.pdf', 'DOC-001004', 'GAP', '2024-02-15', 'Customer #100004', '{"make": "Chevrolet", "model": "Silverado", "year": 2024, "vin": "1GC4YPE77HF100001"}'),
-    ('GAP-2024-001005', 'ACC-100005', 'https://docs.example.com/contracts/GAP-2024-001005.pdf', 'DOC-001005', 'GAP', '2024-03-01', 'Customer #100005', '{"make": "Tesla", "model": "Model 3", "year": 2024, "vin": "5YJ3E1EB9KF000001"}'),
-    ('GAP-2024-001006', 'ACC-100006', 'https://docs.example.com/contracts/GAP-2024-001006.pdf', 'DOC-001006', 'GAP', '2024-03-10', 'Customer #100006', '{"make": "BMW", "model": "X5", "year": 2024, "vin": "5UXCR6C08K0A00001"}'),
-    ('GAP-2024-001007', 'ACC-100007', 'https://docs.example.com/contracts/GAP-2024-001007.pdf', 'DOC-001007', 'GAP', '2024-03-15', 'Customer #100007', '{"make": "Mercedes-Benz", "model": "GLE", "year": 2024, "vin": "4JGDA5HB0KA000001"}'),
-    ('GAP-2024-001008', 'ACC-100008', 'https://docs.example.com/contracts/GAP-2024-001008.pdf', 'DOC-001008', 'GAP', '2024-04-01', 'Customer #100008', '{"make": "Audi", "model": "Q5", "year": 2024, "vin": "WA1BNAFY5K2000001"}'),
-    ('GAP-2024-001009', 'ACC-100009', 'https://docs.example.com/contracts/GAP-2024-001009.pdf', 'DOC-001009', 'GAP', '2024-04-10', 'Customer #100009', '{"make": "Lexus", "model": "RX", "year": 2024, "vin": "2T2HZMAA3LC000001"}'),
-    ('GAP-2024-001010', 'ACC-100010', 'https://docs.example.com/contracts/GAP-2024-001010.pdf', 'DOC-001010', 'GAP', '2024-04-20', 'Customer #100010', '{"make": "Nissan", "model": "Altima", "year": 2024, "vin": "1N4BL4BV5RN000001"}')
+-- Note: PDFs stored in S3 with IAM auth, document text populated by external ETL
+INSERT INTO contracts (
+    contract_id,
+    account_number,
+    s3_bucket,
+    s3_key,
+    document_text,
+    text_extraction_status,
+    text_extracted_at,
+    document_repository_id,
+    contract_type,
+    contract_date,
+    customer_name,
+    vehicle_info
+) VALUES
+    ('GAP-2024-001001', 'ACC-100001', 'contracts-dev', 'contracts/2024/01/GAP-2024-001001.pdf',
+     'This GAP Insurance Agreement provides coverage for the difference between the outstanding loan balance and the actual cash value of the vehicle in the event of a total loss. Premium: $1250.00. Cancellation Fee: $50.00. Refund Method: Pro-Rata.',
+     'completed', CURRENT_TIMESTAMP - INTERVAL '1 day',
+     'DOC-001001', 'GAP', '2024-01-15', 'Customer #100001', '{"make": "Toyota", "model": "Camry", "year": 2023, "vin": "1HGBH41JXMN109186"}'),
+    ('GAP-2024-001002', 'ACC-100002', 'contracts-dev', 'contracts/2024/01/GAP-2024-001002.pdf',
+     'GAP Insurance Contract. Premium: $1895.00. Cancellation Fee: $75.00. Refund Calculation: Rule of 78s method.',
+     'completed', CURRENT_TIMESTAMP - INTERVAL '1 day',
+     'DOC-001002', 'GAP', '2024-01-20', 'Customer #100002', '{"make": "Honda", "model": "Accord", "year": 2023, "vin": "19XFB2F59CE000001"}'),
+    ('GAP-2024-001003', 'ACC-100003', 'contracts-dev', 'contracts/2024/02/GAP-2024-001003.pdf',
+     'GAP Coverage Agreement. Premium Amount: $2150.00. Administrative Fee for Cancellation: $100.00. Refund: Pro-Rata calculation.',
+     'completed', CURRENT_TIMESTAMP - INTERVAL '2 days',
+     'DOC-001003', 'GAP', '2024-02-10', 'Customer #100003', '{"make": "Ford", "model": "F-150", "year": 2024, "vin": "1FTFW1E80MFC10001"}'),
+    ('GAP-2024-001004', 'ACC-100004', 'contracts-dev', 'contracts/2024/02/GAP-2024-001004.pdf',
+     NULL, 'pending', NULL,
+     'DOC-001004', 'GAP', '2024-02-15', 'Customer #100004', '{"make": "Chevrolet", "model": "Silverado", "year": 2024, "vin": "1GC4YPE77HF100001"}'),
+    ('GAP-2024-001005', 'ACC-100005', 'contracts-dev', 'contracts/2024/03/GAP-2024-001005.pdf',
+     NULL, 'pending', NULL,
+     'DOC-001005', 'GAP', '2024-03-01', 'Customer #100005', '{"make": "Tesla", "model": "Model 3", "year": 2024, "vin": "5YJ3E1EB9KF000001"}'),
+    ('GAP-2024-001006', 'ACC-100006', 'contracts-dev', 'contracts/2024/03/GAP-2024-001006.pdf',
+     NULL, 'pending', NULL,
+     'DOC-001006', 'GAP', '2024-03-10', 'Customer #100006', '{"make": "BMW", "model": "X5", "year": 2024, "vin": "5UXCR6C08K0A00001"}'),
+    ('GAP-2024-001007', 'ACC-100007', 'contracts-dev', 'contracts/2024/03/GAP-2024-001007.pdf',
+     NULL, 'failed', CURRENT_TIMESTAMP - INTERVAL '3 days',
+     'DOC-001007', 'GAP', '2024-03-15', 'Customer #100007', '{"make": "Mercedes-Benz", "model": "GLE", "year": 2024, "vin": "4JGDA5HB0KA000001"}'),
+    ('GAP-2024-001008', 'ACC-100008', 'contracts-dev', 'contracts/2024/04/GAP-2024-001008.pdf',
+     NULL, 'pending', NULL,
+     'DOC-001008', 'GAP', '2024-04-01', 'Customer #100008', '{"make": "Audi", "model": "Q5", "year": 2024, "vin": "WA1BNAFY5K2000001"}'),
+    ('GAP-2024-001009', 'ACC-100009', 'contracts-dev', 'contracts/2024/04/GAP-2024-001009.pdf',
+     NULL, 'pending', NULL,
+     'DOC-001009', 'GAP', '2024-04-10', 'Customer #100009', '{"make": "Lexus", "model": "RX", "year": 2024, "vin": "2T2HZMAA3LC000001"}'),
+    ('GAP-2024-001010', 'ACC-100010', 'contracts-dev', 'contracts/2024/04/GAP-2024-001010.pdf',
+     NULL, 'pending', NULL,
+     'DOC-001010', 'GAP', '2024-04-20', 'Customer #100010', '{"make": "Nissan", "model": "Altima", "year": 2024, "vin": "1N4BL4BV5RN000001"}')
 ON CONFLICT (contract_id) DO NOTHING;
 
 -- =============================================================================

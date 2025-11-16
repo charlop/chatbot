@@ -133,7 +133,7 @@ export default function ContractDetailsPage() {
         {/* Left Panel - PDF Viewer (2/3 width on large screens) */}
         <div className="lg:col-span-2 h-full">
           <PDFViewer
-            url={contract.pdfUrl || ''}
+            contractId={contract.contractId}
             fileName={`${contract.accountNumber}.pdf`}
           />
         </div>

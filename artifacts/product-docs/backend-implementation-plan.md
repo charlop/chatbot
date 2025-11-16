@@ -330,52 +330,89 @@ We'll build the FastAPI application to use this existing schema.
 
 ---
 
-### Day 6 (8 hours): Extraction Workflow & Document Service
+### Day 6 (8 hours): Extraction Workflow & PDF Streaming
 
-**Goals**: Implement extraction endpoint and document repository integration
+**Goals**: Implement extraction endpoint, S3 PDF streaming, and contract text retrieval
+
+**Architecture Context:**
+- PDFs stored in S3 with IAM authentication (not publicly accessible)
+- Document text and embeddings populated by external batch ETL (not called at runtime)
+- Backend provides streaming proxy for PDFs
+- See: `artifacts/product-docs/architecture-pdf-streaming.md`
 
 **Tasks:**
 
-1. **Document Service (Mock)** (2 hours)
-   - Write tests for document retrieval
-   - Implement `services/document_service.py`
-   - Methods: `get_pdf`, `get_text`, `get_embeddings`
-   - Mock external document repository API for now
-   - Return sample PDF text for testing
-   - Test error handling (document not found)
+1. **S3 Service & PDF Streaming** (2 hours)
+   - Add `boto3` to requirements
+   - Write tests for S3 streaming (TDD)
+   - Implement `services/s3_service.py`
+     - `stream_pdf(bucket: str, key: str)` - Stream PDF from S3
+     - Redis caching (TTL: 15 minutes)
+     - Error handling (S3 not found, access denied)
+   - Implement `GET /api/v1/contracts/{contract_id}/pdf` endpoint
+     - Check Redis cache first
+     - Query DB for s3_bucket/s3_key
+     - Stream from S3 with IAM credentials
+     - Return StreamingResponse
+     - Log audit event
+   - Test with sample S3 bucket (local or mock)
 
-2. **Extraction Service** (3 hours)
+2. **Contract Model Updates** (1 hour)
+   - Update `models/database/contract.py`:
+     - Add `document_text` (TEXT) - OCR'd text from ETL
+     - Add `embeddings` (JSONB) - Vector embeddings from ETL
+     - Add `s3_bucket` (VARCHAR) - S3 bucket name
+     - Add `s3_key` (VARCHAR) - S3 object key
+     - Add `text_extracted_at` (TIMESTAMP)
+     - Add `text_extraction_status` (VARCHAR)
+     - Remove/deprecate `pdf_url` (replaced by S3 streaming)
+   - Update `schemas/responses.py`:
+     - Add S3 fields to ContractResponse
+     - Remove `pdf_url` from response
+   - Drop and recreate local database (no migration needed)
+
+3. **Extraction Service** (3 hours)
    - Write tests for extraction flow (TDD)
    - Implement `services/extraction_service.py`
    - Orchestration logic:
-     1. Check if extraction already exists (cache)
-     2. Retrieve document text
-     3. Call LLM provider
-     4. Parse structured output
+     1. Check if extraction already exists (DB + Redis cache)
+     2. Retrieve document text from DB (`contract.document_text`)
+     3. Call LLM provider (via LLM service from Day 5)
+     4. Parse structured output (ExtractionResult)
      5. Store extraction in database (status: pending)
      6. Log audit event
-     7. Cache result
+     7. Cache extraction in Redis (TTL: 30 minutes)
    - Test with mocked LLM responses
-   - Test error scenarios (LLM timeout, parsing failure)
+   - Test error scenarios (LLM timeout, parsing failure, missing text)
+   - Test idempotency (don't re-extract if already exists)
 
-3. **Extraction Endpoint** (2 hours)
-   - Write tests for extraction endpoint
-   - Implement `POST /api/v1/extractions/{contract_id}/extract`
-   - Call extraction service
-   - Return extraction data with confidence scores
-   - Handle errors gracefully (fallback message)
-   - Test idempotency (don't re-extract if already done)
-
-4. **Extraction Retrieval** (1 hour)
+4. **Extraction Endpoints** (2 hours)
+   - Write tests for extraction endpoints
+   - Implement `POST /api/v1/extractions/create`
+     - Accepts `contract_id` in request body
+     - Calls extraction service
+     - Returns extraction data with confidence scores
+     - Handle errors gracefully (fallback message)
+     - Test idempotency (return existing if already extracted)
    - Implement `GET /api/v1/extractions/{extraction_id}`
-   - Return extraction with audit trail
-   - Test different extraction states
+     - Return extraction with audit trail
+     - Include extraction metadata (model, provider, cost)
+     - Test different extraction states (pending, approved, rejected)
 
 **Deliverables:**
-- ✅ Document service with mocked repository
+- ✅ S3 service with PDF streaming and caching
+- ✅ PDF endpoint (`GET /contracts/{id}/pdf`)
+- ✅ Contract model with document text and S3 fields
 - ✅ Extraction service orchestrating LLM calls
 - ✅ Extraction endpoints with tests
 - ✅ End-to-end extraction flow working
+
+**Note:** External document ETL is out of scope - it's a batch process that populates:
+- `document_text` - OCR'd PDF text
+- `embeddings` - Vector embeddings
+- `s3_bucket`, `s3_key` - PDF location
+
+We only consume this data at runtime; we don't call any external document API.
 
 ---
 

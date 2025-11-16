@@ -25,9 +25,22 @@ class Contract(Base):
 
     # Required fields
     account_number: Mapped[str] = mapped_column(String(100), nullable=False)
-    pdf_url: Mapped[str] = mapped_column(Text, nullable=False)
 
-    # Optional fields
+    # S3 Storage (PDFs stored with IAM authentication)
+    s3_bucket: Mapped[str] = mapped_column(String(255), nullable=False)
+    s3_key: Mapped[str] = mapped_column(String(1024), nullable=False)
+
+    # Document Content (populated by external ETL batch process)
+    document_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    embeddings: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    text_extracted_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
+    text_extraction_status: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # 'pending', 'completed', 'failed'
+
+    # Optional metadata fields
     document_repository_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     contract_type: Mapped[str] = mapped_column(String(50), default="GAP", nullable=False)
     contract_date: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -63,11 +76,14 @@ class Contract(Base):
 
     # Constraints
     __table_args__ = (
-        CheckConstraint("pdf_url <> ''", name="pdf_url_not_empty"),
+        CheckConstraint("s3_bucket <> ''", name="s3_bucket_not_empty"),
+        CheckConstraint("s3_key <> ''", name="s3_key_not_empty"),
         Index("idx_contracts_account_number", "account_number"),
         Index("idx_contracts_contract_type", "contract_type"),
         Index("idx_contracts_last_synced_at", "last_synced_at"),
         Index("idx_contracts_contract_date", "contract_date"),
+        Index("idx_contracts_s3_location", "s3_bucket", "s3_key"),
+        Index("idx_contracts_extraction_status", "text_extraction_status"),
     )
 
     def __repr__(self) -> str:

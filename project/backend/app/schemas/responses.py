@@ -15,17 +15,31 @@ from uuid import UUID
 class ContractResponse(BaseModel):
     """
     Response schema for contract data.
-    Includes all contract metadata.
+    Includes all contract metadata and S3 storage information.
+
+    NOTE: PDFs are accessed via GET /api/v1/contracts/{contract_id}/pdf endpoint
+    (backend proxy with IAM authentication), not via direct URL.
     """
 
     contract_id: str
     account_number: str
-    pdf_url: str
+
+    # S3 Storage (for backend use and debugging)
+    s3_bucket: str
+    s3_key: str
+
+    # Document Content Status (populated by external ETL)
+    text_extraction_status: str | None = None  # 'pending', 'completed', 'failed'
+    text_extracted_at: datetime | None = None
+
+    # Contract Metadata
     document_repository_id: str | None = None
     contract_type: str
     contract_date: date | None = None
     customer_name: str | None = None
     vehicle_info: dict | None = None
+
+    # Timestamps
     created_at: datetime
     updated_at: datetime
     last_synced_at: datetime | None = None
@@ -40,7 +54,10 @@ class ContractResponse(BaseModel):
                 {
                     "contract_id": "TEST-001",
                     "account_number": "ACC-12345",
-                    "pdf_url": "https://example.com/contract.pdf",
+                    "s3_bucket": "contracts-production",
+                    "s3_key": "contracts/2024/11/TEST-001.pdf",
+                    "text_extraction_status": "completed",
+                    "text_extracted_at": "2025-11-15T10:00:00Z",
                     "contract_type": "GAP",
                     "customer_name": "John Doe",
                     "vehicle_info": {
@@ -110,8 +127,8 @@ class ExtractionResponse(BaseModel):
     rejected_by: UUID | None = None
     rejection_reason: str | None = None
 
-    # Include corrections if loaded
-    corrections: List["CorrectionResponse"] | None = None
+    # TODO: Add corrections in Day 7
+    # corrections: List["CorrectionResponse"] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -164,7 +181,7 @@ class ExtractionResponse(BaseModel):
             rejected_at=extraction.rejected_at,
             rejected_by=extraction.rejected_by,
             rejection_reason=extraction.rejection_reason,
-            corrections=None,  # Will be populated separately if needed
+            # corrections=None,  # Will be populated separately if needed (Day 7)
         )
 
 

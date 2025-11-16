@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 export interface PDFViewerProps {
-  url: string;
+  contractId: string; // Changed from url - now loads PDF via backend proxy
   fileName?: string;
   onLoadSuccess?: () => void;
   onLoadError?: (error: Error) => void;
@@ -21,13 +21,16 @@ export interface HighlightRegion {
 }
 
 export const PDFViewer = ({
-  url,
+  contractId,
   fileName = 'Contract.pdf',
   onLoadSuccess,
   onLoadError,
 }: PDFViewerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Construct backend PDF endpoint URL
+  const pdfEndpoint = `/api/v1/contracts/${contractId}/pdf`;
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -46,10 +49,8 @@ export const PDFViewer = ({
   };
 
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
+    // Use backend endpoint for download
+    window.open(pdfEndpoint, '_blank');
   };
 
   const handlePrint = () => {
@@ -60,7 +61,7 @@ export const PDFViewer = ({
   };
 
   const handleOpenInNewTab = () => {
-    window.open(url, '_blank');
+    window.open(pdfEndpoint, '_blank');
   };
 
   return (
@@ -131,7 +132,7 @@ export const PDFViewer = ({
 
         {!error && (
           <iframe
-            src={`${url}#toolbar=1&navpanes=1&scrollbar=1`}
+            src={`${pdfEndpoint}#toolbar=1&navpanes=1&scrollbar=1`}
             className="w-full h-full border-0"
             title={fileName}
             onLoad={handleIframeLoad}

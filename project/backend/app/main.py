@@ -13,7 +13,7 @@ from app.database import close_database, check_database_health
 from app.schemas.responses import HealthResponse
 from app.middleware.error_handling import error_handling_middleware
 from app.middleware.logging import request_logging_middleware
-from app.api.v1 import contracts
+from app.api.v1 import contracts, extractions
 
 # Configure logging
 logging.basicConfig(
@@ -149,10 +149,10 @@ async def root():
 
 # Include API routers
 app.include_router(contracts.router, prefix=settings.api_v1_prefix, tags=["Contracts"])
+app.include_router(extractions.router, prefix=settings.api_v1_prefix, tags=["Extractions"])
 
-# TODO: Include remaining routers (Day 6+)
-# from app.api.v1 import extractions, chat, admin
-# app.include_router(extractions.router, prefix=settings.api_v1_prefix, tags=["Extractions"])
+# TODO: Include remaining routers (Day 7+)
+# from app.api.v1 import chat, admin
 # app.include_router(chat.router, prefix=settings.api_v1_prefix, tags=["Chat"])
 # app.include_router(admin.router, prefix=settings.api_v1_prefix, tags=["Admin"])
 

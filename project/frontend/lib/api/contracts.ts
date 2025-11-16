@@ -25,8 +25,17 @@ export interface AuditInfo {
 
 export interface Contract {
   id: string;
+  contractId: string;
   accountNumber: string;
-  pdfUrl?: string;
+
+  // S3 Storage (for backend use and debugging)
+  s3Bucket?: string;
+  s3Key?: string;
+
+  // Document Content Status (populated by external ETL)
+  textExtractionStatus?: string; // 'pending', 'completed', 'failed'
+  textExtractedAt?: string;
+
   documentRepositoryId?: string;
   contract_type?: string;
   contractType?: string;
@@ -50,7 +59,15 @@ export interface Contract {
 export interface SearchContractResponse {
   contractId: string;
   accountNumber: string;
-  pdfUrl: string;
+
+  // S3 Storage (for backend use and debugging)
+  s3Bucket?: string;
+  s3Key?: string;
+
+  // Document Content Status
+  textExtractionStatus?: string;
+  textExtractedAt?: string;
+
   documentRepositoryId?: string;
   contractType: string;
   contractDate?: string;
@@ -87,14 +104,10 @@ export const getContract = async (contractId: string): Promise<Contract> => {
 };
 
 /**
- * Get contract PDF URL
+ * Get contract PDF URL (backend proxy endpoint)
  * @param contractId - The contract ID
- * @returns Promise with PDF URL
+ * @returns Promise with PDF endpoint URL
  */
 export const getContractPdfUrl = async (contractId: string): Promise<string> => {
-  const contract = await getContract(contractId);
-  if (!contract.pdfUrl) {
-    throw new Error('PDF URL not available for this contract');
-  }
-  return contract.pdfUrl;
+  return `/api/v1/contracts/${contractId}/pdf`;
 };

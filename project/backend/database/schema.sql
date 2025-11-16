@@ -91,20 +91,37 @@ CREATE INDEX idx_sessions_is_active ON sessions(is_active);
 -- =============================================================================
 
 -- Contracts table: Metadata for contracts (synced from external RDB)
+-- PDFs stored in S3 with IAM authentication (not publicly accessible)
+-- Document text and embeddings populated by external batch ETL process
 CREATE TABLE contracts (
     contract_id VARCHAR(100) PRIMARY KEY,
     account_number VARCHAR(100) NOT NULL,
-    pdf_url TEXT NOT NULL,
+
+    -- S3 Storage (PDFs stored with IAM authentication)
+    s3_bucket VARCHAR(255) NOT NULL,
+    s3_key VARCHAR(1024) NOT NULL,
+
+    -- Document Content (populated by external ETL batch process)
+    document_text TEXT,
+    embeddings JSONB,
+    text_extracted_at TIMESTAMP WITH TIME ZONE,
+    text_extraction_status VARCHAR(50), -- 'pending', 'completed', 'failed'
+
+    -- Contract Metadata
     document_repository_id VARCHAR(100),
     contract_type VARCHAR(50) DEFAULT 'GAP', -- GAP, VSC, F&I, etc.
     contract_date DATE,
     customer_name VARCHAR(255),
     vehicle_info JSONB, -- Flexible storage for vehicle details
+
+    -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_synced_at TIMESTAMP WITH TIME ZONE,
 
-    CONSTRAINT pdf_url_not_empty CHECK (pdf_url <> '')
+    -- Constraints
+    CONSTRAINT s3_bucket_not_empty CHECK (s3_bucket <> ''),
+    CONSTRAINT s3_key_not_empty CHECK (s3_key <> '')
 );
 
 -- Indexes for contract lookups
@@ -112,6 +129,8 @@ CREATE INDEX idx_contracts_account_number ON contracts(account_number);
 CREATE INDEX idx_contracts_contract_type ON contracts(contract_type);
 CREATE INDEX idx_contracts_last_synced_at ON contracts(last_synced_at);
 CREATE INDEX idx_contracts_contract_date ON contracts(contract_date);
+CREATE INDEX idx_contracts_s3_location ON contracts(s3_bucket, s3_key);
+CREATE INDEX idx_contracts_extraction_status ON contracts(text_extraction_status);
 
 -- Trigger to update updated_at timestamp
 CREATE TRIGGER update_contracts_updated_at

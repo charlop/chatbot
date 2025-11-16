@@ -152,7 +152,10 @@ class ContractService:
         return ContractResponse(
             contract_id=contract.contract_id,
             account_number=contract.account_number,
-            pdf_url=contract.pdf_url,
+            s3_bucket=contract.s3_bucket,
+            s3_key=contract.s3_key,
+            text_extraction_status=contract.text_extraction_status,
+            text_extracted_at=contract.text_extracted_at,
             document_repository_id=contract.document_repository_id,
             contract_type=contract.contract_type,
             contract_date=contract.contract_date,
