@@ -17,7 +17,7 @@ class ContractFactory:
     @staticmethod
     def build(
         contract_id: str = "GAP-2024-TEST",
-        account_number: str = "ACC-TEST-00001",
+        account_number: str = "000000000001",
         customer_name: str = "Test Customer",
         contract_type: str = "GAP",
         **kwargs,

@@ -36,7 +36,7 @@ def should_use_uv(command):
     command_lower = command.lower()
 
     for pip_cmd, uv_cmd in PIP_TO_UV_MAP.items():
-        if pip_cmd in command_lower:
+        if pip_cmd in command_lower and 'uv' not in command_lower:
             # Replace the pip command with UV equivalent
             suggested = command_lower.replace(pip_cmd, uv_cmd)
             return True, suggested
