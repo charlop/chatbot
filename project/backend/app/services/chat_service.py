@@ -26,12 +26,10 @@ logger = logging.getLogger(__name__)
 class AccountNumberDetector:
     """Detects account numbers in chat messages."""
 
-    # Account number patterns (adjust based on actual format)
-    # Example: 12345-67890 or ACC-12345-67890 or 1234567890
+    # Account number patterns (strictly 12 digits)
+    # Examples: 000123456789, 423567890112
     PATTERNS = [
-        r"\b\d{5}-\d{5}\b",  # 12345-67890
-        r"\bACC-\d{5}-\d{5}\b",  # ACC-12345-67890
-        r"\b\d{10}\b",  # 1234567890
+        r"\b\d{12}\b",  # 12-digit format (e.g., 000123456789, 423567890112)
     ]
 
     @classmethod

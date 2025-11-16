@@ -65,7 +65,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
+# Add custom middleware first (inner layer)
+app.middleware("http")(error_handling_middleware)
+app.middleware("http")(request_logging_middleware)
+
+# Configure CORS last (outer layer) so it runs on all responses including errors
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -73,10 +77,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Add custom middleware
-app.middleware("http")(request_logging_middleware)
-app.middleware("http")(error_handling_middleware)
 
 
 # Health check endpoint

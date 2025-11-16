@@ -21,7 +21,7 @@ from app.models.database.extraction import Extraction
 from app.models.database.contract import Contract
 from app.integrations.llm_providers.base import ExtractionResult, LLMError
 from app.services.llm_service import LLMService
-from app.utils.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
+from app.utils.cache import cache_get, cache_set, cache_delete, cache_delete_pattern, get_redis
 from app.config import settings
 
 logger = logging.getLogger(__name__)
