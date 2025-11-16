@@ -21,7 +21,8 @@ from app.models.database.extraction import Extraction
 from app.models.database.contract import Contract
 from app.integrations.llm_providers.base import ExtractionResult, LLMError
 from app.services.llm_service import LLMService
-from app.utils.cache import get_redis
+from app.utils.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +64,14 @@ class ExtractionService:
         """
         self.db = db
         self.llm_service = LLMService()
-        self.cache_ttl = 1800  # 30 minutes in seconds
-        self.cache_key_prefix = "extraction"
 
     def _get_cache_key(self, contract_id: str) -> str:
-        """Generate Redis cache key for extraction."""
-        return f"{self.cache_key_prefix}:{contract_id}"
+        """Generate Redis cache key for extraction by contract ID."""
+        return f"extraction:contract:{contract_id}"
+
+    def _get_cache_key_by_id(self, extraction_id: UUID) -> str:
+        """Generate Redis cache key for extraction by extraction ID."""
+        return f"extraction:id:{extraction_id}"
 
     async def get_extraction_by_contract_id(self, contract_id: str) -> Optional[Extraction]:
         """
@@ -82,31 +85,33 @@ class ExtractionService:
         """
         # Try cache first
         cache_key = self._get_cache_key(contract_id)
-        redis = await get_redis()
+        cached_value = await cache_get(cache_key)
 
-        if redis:
-            try:
-                # Check if we cached "not found" result
-                cached_value = await redis.get(cache_key)
-                if cached_value == b"null":
-                    logger.debug(f"Cache HIT (null) for extraction {contract_id}")
-                    return None
-            except Exception as e:
-                logger.warning(f"Redis cache read failed: {e}")
+        if cached_value is not None:
+            logger.debug(f"Cache HIT for extraction: {contract_id}")
+            # If cached value is the string "null", no extraction exists
+            if cached_value == "null":
+                return None
+            # Otherwise reconstruct extraction from cache (would need serialization logic)
+            # For now, fall through to DB to keep it simple
+        else:
+            logger.debug(f"Cache MISS for extraction: {contract_id}")
 
         # Query database
         stmt = select(Extraction).where(Extraction.contract_id == contract_id)
         result = await self.db.execute(stmt)
         extraction = result.scalar_one_or_none()
 
-        # Cache result (including null)
-        if redis:
-            try:
-                if extraction is None:
-                    await redis.setex(cache_key, self.cache_ttl, "null")
-                    logger.debug(f"Cached null extraction for {contract_id}")
-            except Exception as e:
-                logger.warning(f"Redis cache write failed: {e}")
+        # Cache result - cache "null" for not found, or cache extraction ID for found
+        if extraction is None:
+            await cache_set(cache_key, "null", ttl=settings.cache_ttl_extraction)
+            logger.debug(f"Cached null extraction for {contract_id}")
+        else:
+            # Cache the extraction ID so we know it exists
+            await cache_set(
+                cache_key, str(extraction.extraction_id), ttl=settings.cache_ttl_extraction
+            )
+            logger.debug(f"Cached extraction ID for {contract_id}")
 
         return extraction
 
@@ -296,20 +301,25 @@ class ExtractionService:
 
     async def invalidate_cache(self, contract_id: str) -> None:
         """
-        Invalidate cached extraction.
+        Invalidate cached extraction and related contract caches.
+
+        When extraction is updated, we need to invalidate:
+        1. Extraction cache (by contract_id)
+        2. Contract caches (both by account and by id) - because contract response may include extraction
 
         Args:
             contract_id: Contract ID
         """
-        cache_key = self._get_cache_key(contract_id)
+        # Invalidate extraction cache
+        extraction_cache_key = self._get_cache_key(contract_id)
+        await cache_delete(extraction_cache_key)
+        logger.info(f"Invalidated extraction cache for {contract_id}")
 
-        redis = await get_redis()
-        if redis:
-            try:
-                await redis.delete(cache_key)
-                logger.info(f"Invalidated extraction cache for {contract_id}")
-            except Exception as e:
-                logger.warning(f"Failed to invalidate cache: {e}")
+        # Also invalidate contract caches since they may include extraction data
+        contract_cache_pattern = f"contract:*:{contract_id}"
+        deleted_count = await cache_delete_pattern(contract_cache_pattern)
+        if deleted_count > 0:
+            logger.info(f"Invalidated {deleted_count} contract cache entries for {contract_id}")
 
     async def submit_extraction(
         self,

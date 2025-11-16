@@ -125,7 +125,7 @@ class ExtractionSubmitRequest(BaseModel):
 class ChatMessageRequest(BaseModel):
     """
     Request schema for AI chat messages.
-    Supports conversation history.
+    Supports conversation history and session management.
     """
 
     contract_id: str = Field(
@@ -138,9 +138,9 @@ class ChatMessageRequest(BaseModel):
         max_length=2000,
         description="User's message to the AI",
     )
-    history: List[dict] | None = Field(
-        default=None,
-        description="Previous conversation history (optional)",
+    session_id: str = Field(
+        ...,
+        description="Chat session ID (UUID v4 format recommended)",
     )
 
     @field_validator("message")
@@ -158,15 +158,12 @@ class ChatMessageRequest(BaseModel):
                 {
                     "contract_id": "TEST-001",
                     "message": "What is the GAP premium for this contract?",
-                    "history": None,
+                    "session_id": "example-session-uuid-string",
                 },
                 {
                     "contract_id": "TEST-001",
                     "message": "And what is the cancellation fee?",
-                    "history": [
-                        {"role": "user", "content": "What is the GAP premium?"},
-                        {"role": "assistant", "content": "The GAP premium is $500.00"},
-                    ],
+                    "session_id": "example-session-uuid-string",
                 },
             ]
         }

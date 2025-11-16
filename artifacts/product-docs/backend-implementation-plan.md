@@ -418,50 +418,107 @@ We only consume this data at runtime; we don't call any external document API.
 
 ## Week 2: Approval Workflow & Features (Days 7-12)
 
-### Day 7 (8 hours): Approval & Edit Endpoints
+### Day 7 (8 hours): Simplified Submission Workflow
 
-**Goals**: Implement approve, reject, and edit functionality
+**Goals**: Implement single submit endpoint that handles approval with optional corrections
+
+**Background:**
+Simplified workflow removes separate approve/reject/edit endpoints in favor of a single submit endpoint:
+- User reviews extraction, optionally edits fields inline
+- Single "Submit" button sends all changes at once
+- Corrections stored in `corrections` table (for fine-tuning metrics)
+- Extraction values updated with corrections (source of truth)
+- No rejection workflow - if data is wrong, user just corrects it
 
 **Tasks:**
 
-1. **Approval Endpoint** (2 hours)
-   - Write tests for approval flow
-   - Implement `POST /api/v1/extractions/{extraction_id}/approve`
-   - Update extraction status to 'approved'
-   - Log audit event with user context
-   - Return success response
-   - Test duplicate approval handling
+1. **Database Schema Changes** (1 hour)
+   - Write migration to remove rejection fields from Extraction model
+   - Remove: `rejected_at`, `rejected_by`, `rejection_reason` columns
+   - Update status constraint to only allow: 'pending', 'approved'
+   - Remove CheckConstraint for 'rejected' status
+   - Test migration up/down
 
-2. **Rejection Endpoint** (1.5 hours)
-   - Write tests for rejection
-   - Implement `POST /api/v1/extractions/{extraction_id}/reject`
-   - Require rejection reason
-   - Update status to 'rejected'
-   - Log audit event
-   - Test validation (reason required)
+2. **Update Models & Schemas** (1.5 hours)
+   - Update `models/database/extraction.py`:
+     - Remove rejection fields
+     - Update status constraint
+   - Update `schemas/responses.py`:
+     - Remove rejection fields from ExtractionResponse
+   - Remove `ExtractionRejectionRequest` schema
+   - Remove `ExtractionApprovalRequest` schema (replaced by submit)
+   - Remove `ExtractionEditRequest` schema (replaced by submit)
+   - Create new `ExtractionSubmitRequest` schema:
+     ```python
+     class FieldCorrection(BaseModel):
+         field_name: str  # gap_insurance_premium, refund_calculation_method, cancellation_fee
+         corrected_value: str
+         correction_reason: str | None = None
 
-3. **Edit/Correction Endpoint** (3 hours)
-   - Write tests for correction flow
-   - Implement `POST /api/v1/extractions/{extraction_id}/edit`
-   - Store correction in `corrections` table
-   - Keep original value + corrected value
-   - Optional correction reason
-   - Update extraction with corrected value
-   - Log audit event
-   - Test multiple corrections on same field
+     class ExtractionSubmitRequest(BaseModel):
+         corrections: List[FieldCorrection] = []
+         notes: str | None = None
+     ```
 
-4. **Audit Repository** (1.5 hours)
+3. **Correction Repository** (1 hour)
+   - Write tests for correction CRUD
+   - Implement `repositories/correction_repository.py`
+   - Methods: `create_correction`, `get_by_extraction_id`, `bulk_create`
+   - Test correction creation
+
+4. **Submission Service Logic** (3 hours)
+   - Write tests for submit flow (with/without corrections)
+   - Implement `submit_extraction()` in `services/extraction_service.py`:
+     ```python
+     async def submit_extraction(
+         extraction_id: UUID,
+         corrections: List[FieldCorrection],
+         notes: str | None = None,
+         submitted_by: UUID | None = None,
+     ) -> Extraction:
+         # 1. Validate extraction exists and is pending
+         # 2. For each correction:
+         #    - Create Correction record (audit trail)
+         #    - Update corresponding field in Extraction (source of truth)
+         # 3. Update status to 'approved'
+         # 4. Set approved_at and approved_by
+         # 5. Log audit event
+         # 6. Return updated extraction
+     ```
+   - Test atomic transaction (all or nothing)
+   - Test submit without corrections (simple approval)
+   - Test submit with multiple corrections
+   - Test validation (invalid field names, empty values)
+   - Test idempotency (can't submit already-approved extraction)
+
+5. **Submit Endpoint** (1 hour)
+   - Write tests for submit API
+   - Implement `POST /api/v1/extractions/{extraction_id}/submit`
+   - Request body: `ExtractionSubmitRequest`
+   - Response: Updated `ExtractionResponse` with corrections
+   - Test error scenarios (not found, already submitted, validation errors)
+   - Log audit event with correction details
+
+6. **Audit Repository** (0.5 hours)
    - Write tests for audit queries
    - Implement `repositories/audit_repository.py`
-   - Methods: `create_event`, `get_by_contract_id`, `get_by_user_id`
+   - Methods: `create_event`, `get_by_contract_id`, `get_by_extraction_id`
    - Ensure append-only (no deletes/updates)
    - Test event ordering and filtering
 
 **Deliverables:**
-- ✅ Approve, reject, edit endpoints with tests
-- ✅ Correction tracking working
+- ✅ Database migration removing rejection fields
+- ✅ Updated models and schemas
+- ✅ Correction repository with tests
+- ✅ Submit service with correction handling
+- ✅ Submit endpoint with tests
 - ✅ Audit repository with event sourcing
-- ✅ Complete review workflow functional
+- ✅ Complete simplified submission workflow functional
+
+**Note:** This simplification makes the workflow more intuitive:
+- User sees extraction → edits any incorrect values → clicks "Submit"
+- Backend handles both correction tracking (for ML improvement) and updating the source of truth
+- No confusing approve/reject/edit split - just one clear action
 
 ---
 
@@ -688,7 +745,7 @@ We only consume this data at runtime; we don't call any external document API.
 - [ ] Day 6: Extraction workflow, document service
 
 ### Week 2: Approval & Features (Days 7-12)
-- [ ] Day 7: Approval, rejection, edit endpoints
+- [ ] Day 7: Simplified submission workflow (single submit endpoint with corrections)
 - [ ] Day 8: Audit logging, event sourcing
 - [ ] Day 9: Chat interface backend
 - [ ] Day 10: Redis caching layer
@@ -918,6 +975,7 @@ This is a **glorified chatbot with a basic form**. We're intentionally keeping t
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-11-09 | Claude Code | Initial backend implementation plan (12 days, no auth) |
+| 1.1 | 2025-11-16 | Claude Code | Updated Day 7 to simplified submission workflow. Removed separate approve/reject/edit endpoints in favor of single submit endpoint with corrections array. Corrections stored in both `corrections` table (ML metrics) and `extractions` table (source of truth). |
 
 ---
 

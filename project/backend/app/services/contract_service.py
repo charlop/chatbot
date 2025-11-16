@@ -13,6 +13,8 @@ from app.models.database import Contract, Extraction, AuditEvent
 from app.schemas.requests import ContractSearchRequest
 from app.schemas.responses import ContractResponse
 from app.repositories.contract_repository import ContractRepository
+from app.utils.cache import cache_get, cache_set, cache_delete
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +35,13 @@ class ContractService:
 
         Flow:
         1. Validate account number
-        2. Check cache (Redis) - TODO: Day 10
+        2. Check cache (Redis) - 15-minute TTL
         3. Query database for contract
         4. If not found, query external RDB (mocked for now)
         5. Store in database if found externally
-        6. Log audit event
-        7. Return contract metadata
+        6. Cache the result
+        7. Log audit event
+        8. Return contract metadata
 
         Args:
             search_request: Contract search request with account number
@@ -53,6 +56,13 @@ class ContractService:
 
         # Log search attempt
         logger.info(f"Searching for contract with account number: {account_number}")
+
+        # Check cache first
+        cache_key = f"contract:account:{account_number}"
+        cached_contract = await cache_get(cache_key)
+        if cached_contract:
+            logger.info(f"Contract found in cache: {account_number}")
+            return ContractResponse(**cached_contract)
 
         # Query database
         contract = await self.contract_repo.get_by_account_number(account_number)
@@ -70,7 +80,13 @@ class ContractService:
                 },
             )
 
-            return await self._contract_to_response(contract)
+            # Convert to response
+            response = await self._contract_to_response(contract)
+
+            # Cache the result (15-minute TTL)
+            await cache_set(cache_key, response.model_dump(), ttl=settings.cache_ttl_contract)
+
+            return response
 
         # Contract not found in database
         # TODO: Query external RDB API (Day 4 - mock for now)
@@ -96,7 +112,13 @@ class ContractService:
                 },
             )
 
-            return await self._contract_to_response(created_contract)
+            # Convert to response
+            response = await self._contract_to_response(created_contract)
+
+            # Cache the result (15-minute TTL)
+            await cache_set(cache_key, response.model_dump(), ttl=settings.cache_ttl_contract)
+
+            return response
 
         # Contract not found anywhere
         logger.warning(f"Contract not found anywhere for account: {account_number}")
@@ -117,6 +139,13 @@ class ContractService:
         """
         logger.info(f"Retrieving contract: {contract_id}")
 
+        # Check cache first
+        cache_key = f"contract:id:{contract_id}"
+        cached_contract = await cache_get(cache_key)
+        if cached_contract:
+            logger.info(f"Contract found in cache: {contract_id}")
+            return ContractResponse(**cached_contract)
+
         # Get contract from database
         contract = await self.contract_repo.get_by_id(contract_id)
 
@@ -131,7 +160,13 @@ class ContractService:
             event_data={"include_extraction": include_extraction},
         )
 
-        return await self._contract_to_response(contract, include_extraction=include_extraction)
+        # Convert to response
+        response = await self._contract_to_response(contract, include_extraction=include_extraction)
+
+        # Cache the result (15-minute TTL)
+        await cache_set(cache_key, response.model_dump(), ttl=settings.cache_ttl_contract)
+
+        return response
 
     async def _contract_to_response(
         self, contract: Contract, include_extraction: bool = True

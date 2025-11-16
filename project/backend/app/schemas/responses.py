@@ -262,23 +262,25 @@ class ErrorResponse(BaseModel):
 class ChatResponse(BaseModel):
     """
     Response schema for AI chat messages.
-    Includes AI response and source citations.
+    Includes AI response, source citations, and session management.
     """
 
-    message: str = Field(..., description="AI's response message")
+    response: str = Field(..., description="AI's response message")
     sources: List[dict] | None = Field(
         default=None, description="Source citations from contract/extraction"
     )
-    context: dict | None = Field(default=None, description="Additional context used in response")
-    llm_provider: str | None = None
-    processing_time_ms: int | None = None
-    cost_usd: Decimal | None = None
+    metadata: dict = Field(
+        ..., description="Response metadata (session_id, contract_id, model, etc.)"
+    )
+    detected_account_number: str | None = Field(
+        default=None, description="Account number detected in user message (if any)"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
                 {
-                    "message": "The GAP insurance premium for this contract is $500.00.",
+                    "response": "The GAP insurance premium for this contract is $500.00.",
                     "sources": [
                         {
                             "field": "gap_insurance_premium",
@@ -287,8 +289,15 @@ class ChatResponse(BaseModel):
                             "source": {"page": 1, "section": "Pricing"},
                         }
                     ],
-                    "llm_provider": "anthropic",
-                    "processing_time_ms": 1200,
+                    "metadata": {
+                        "session_id": "example-session-id",
+                        "contract_id": "TEST-001",
+                        "model": "claude-3-5-sonnet",
+                        "provider": "anthropic",
+                        "duration_ms": 1200,
+                        "message_count": 2,
+                    },
+                    "detected_account_number": None,
                 }
             ]
         }
