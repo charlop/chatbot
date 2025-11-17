@@ -9,12 +9,14 @@ When running EPCC commands, save all documentation to these locations:
 - **CODE Phase**: Save EPCC_CODE.md to `docs/EPCC-Code/`
 - **COMMIT Phase**: Save EPCC_COMMIT.md to `docs/EPCC-Commit/`
 
-## Project Context
-- Documentation Root: `artifacts/`
-- PRD Location: `artifacts/product-docs/`
-- Project Type: Greenfield
+## Project Background
+
+We are building a tool to help F&I back-office specialists understand the contractual terms of aftermarket products (cancellation fees, refund details, state-specific logic). The tool connects to a database that already has the contract text loaded in. This tool uses AI to extract the info if needed, and allows users to prompt for additional info.
+- PRD Location: `artifacts/product-docs/PRD.md`
+- UI/UX design specs: `artifacts/mockups/README.md`
 - Frontend project location: `project/frontend`
 - Backend project location: `project/backend`
+- Frontend, backend, and DB can be started (and optionally seeded) by running `project/start.sh`
 
 ## Code Quality Standards
 - ALWAYS follow SOLID design principles
