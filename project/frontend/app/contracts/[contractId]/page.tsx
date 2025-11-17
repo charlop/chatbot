@@ -77,8 +77,8 @@ export default function ContractDetailsPage() {
     }
 
     try {
-      // Submit extraction with corrections
-      await submitExtraction(contractId, { corrections, notes });
+      // Submit extraction with corrections using extraction ID
+      await submitExtraction(contract.extractedData.extractionId, { corrections, notes });
 
       success(
         corrections.length > 0
@@ -212,6 +212,7 @@ export default function ContractDetailsPage() {
           {extraction ? (
             <DataPanel
               extraction={extraction}
+              extractedData={contract.extractedData}
               onSubmit={handleSubmit}
               onViewInDocument={handleJumpToField}
             />

@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { DataCard } from './DataCard';
 import { SubmitModal } from './SubmitModal';
+import { AuditTrail } from '@/components/audit/AuditTrail';
 import type { Extraction, FieldCorrection } from '@/lib/api/extractions';
+import type { ExtractedData } from '@/lib/api/contracts';
 
 export interface DataPanelProps {
   /**
    * Extraction data to display
    */
   extraction: Extraction;
+
+  /**
+   * Extracted data from contract (includes audit metadata)
+   */
+  extractedData?: ExtractedData;
 
   /**
    * Callback when submit is clicked
@@ -38,6 +45,7 @@ const FIELD_NAME_MAP = {
  */
 export const DataPanel: React.FC<DataPanelProps> = ({
   extraction,
+  extractedData,
   onSubmit,
   onViewInDocument,
   className = '',
@@ -173,6 +181,13 @@ export const DataPanel: React.FC<DataPanelProps> = ({
                 : undefined
             }
           />
+
+          {/* Audit Trail */}
+          {extractedData && (
+            <div className="pt-4 border-t border-neutral-200">
+              <AuditTrail extractedData={extractedData} correctionsCount={correctionsCount} />
+            </div>
+          )}
 
           {/* Submit Button */}
           <div className="pt-4 border-t border-neutral-200">

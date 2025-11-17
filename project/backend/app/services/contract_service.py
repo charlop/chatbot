@@ -206,6 +206,7 @@ class ContractService:
         if include_extraction and hasattr(contract, "extractions") and contract.extractions:
             extraction = contract.extractions
             response_dict["extracted_data"] = {
+                "extraction_id": str(extraction.extraction_id),
                 "gap_premium": (
                     float(extraction.gap_insurance_premium)
                     if extraction.gap_insurance_premium is not None
@@ -236,6 +237,14 @@ class ContractService:
                 ),
                 "cancellation_fee_source": extraction.cancellation_fee_source,
                 "status": extraction.status,
+                # Audit metadata
+                "llm_model_version": extraction.llm_model_version,
+                "llm_provider": extraction.llm_provider,
+                "processing_time_ms": extraction.processing_time_ms,
+                "extracted_at": extraction.extracted_at,
+                "extracted_by": str(extraction.extracted_by) if extraction.extracted_by else None,
+                "approved_at": extraction.approved_at,
+                "approved_by": str(extraction.approved_by) if extraction.approved_by else None,
             }
 
         return ContractResponse(**response_dict)

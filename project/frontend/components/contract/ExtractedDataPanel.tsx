@@ -53,9 +53,9 @@ export const ExtractedDataPanel = ({
 }: ExtractedDataPanelProps) => {
   // Calculate overall confidence
   const confidenceScores = [
-    contract.extracted_data?.gap_premium_confidence,
-    contract.extracted_data?.refund_method_confidence,
-    contract.extracted_data?.cancellation_fee_confidence,
+    contract.extractedData?.gapPremiumConfidence,
+    contract.extractedData?.refundMethodConfidence,
+    contract.extractedData?.cancellationFeeConfidence,
   ].filter((score): score is number => score !== undefined && score !== null);
 
   const overallConfidence = confidenceScores.length > 0
@@ -127,19 +127,19 @@ export const ExtractedDataPanel = ({
             <p className="text-xs text-neutral-600 dark:text-neutral-400">
               GAP Insurance Premium
             </p>
-            <ConfidenceBadge confidence={contract.extracted_data?.gap_premium_confidence} />
+            <ConfidenceBadge confidence={contract.extractedData?.gapPremiumConfidence} />
           </div>
           <p className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-            {contract.extracted_data?.gap_premium !== undefined && contract.extracted_data?.gap_premium !== null
-              ? `$${Number(contract.extracted_data.gap_premium).toFixed(2)}`
+            {contract.extractedData?.gapPremium !== undefined && contract.extractedData?.gapPremium !== null
+              ? `$${Number(contract.extractedData.gapPremium).toFixed(2)}`
               : 'Not extracted'}
           </p>
-          {contract.extracted_data?.gap_premium_source && (
+          {contract.extractedData?.gapPremiumSource && (
             <>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                {typeof contract.extracted_data.gap_premium_source === 'string'
-                  ? contract.extracted_data.gap_premium_source
-                  : JSON.stringify(contract.extracted_data.gap_premium_source)}
+                {typeof contract.extractedData.gapPremiumSource === 'string'
+                  ? contract.extractedData.gapPremiumSource
+                  : JSON.stringify(contract.extractedData.gapPremiumSource)}
               </p>
               {onJumpToField && (
                 <button
@@ -159,17 +159,17 @@ export const ExtractedDataPanel = ({
             <p className="text-xs text-neutral-600 dark:text-neutral-400">
               Refund Calculation Method
             </p>
-            <ConfidenceBadge confidence={contract.extracted_data?.refund_method_confidence} />
+            <ConfidenceBadge confidence={contract.extractedData?.refundMethodConfidence} />
           </div>
           <p className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-            {contract.extracted_data?.refund_method || 'Not extracted'}
+            {contract.extractedData?.refundMethod || 'Not extracted'}
           </p>
-          {contract.extracted_data?.refund_method_source && (
+          {contract.extractedData?.refundMethodSource && (
             <>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                {typeof contract.extracted_data.refund_method_source === 'string'
-                  ? contract.extracted_data.refund_method_source
-                  : JSON.stringify(contract.extracted_data.refund_method_source)}
+                {typeof contract.extractedData.refundMethodSource === 'string'
+                  ? contract.extractedData.refundMethodSource
+                  : JSON.stringify(contract.extractedData.refundMethodSource)}
               </p>
               {onJumpToField && (
                 <button
@@ -185,8 +185,8 @@ export const ExtractedDataPanel = ({
 
         {/* Cancellation Fee */}
         <div className={`p-4 rounded-lg ${
-          contract.extracted_data?.cancellation_fee_confidence &&
-          contract.extracted_data.cancellation_fee_confidence < 90
+          contract.extractedData?.cancellationFeeConfidence &&
+          contract.extractedData.cancellationFeeConfidence < 90
             ? 'bg-warning-50 dark:bg-warning-900/10 border border-warning-200 dark:border-warning-800'
             : 'bg-neutral-50 dark:bg-neutral-900'
         }`}>
@@ -194,19 +194,19 @@ export const ExtractedDataPanel = ({
             <p className="text-xs text-neutral-600 dark:text-neutral-400">
               Cancellation Fee
             </p>
-            <ConfidenceBadge confidence={contract.extracted_data?.cancellation_fee_confidence} />
+            <ConfidenceBadge confidence={contract.extractedData?.cancellationFeeConfidence} />
           </div>
           <p className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-            {contract.extracted_data?.cancellation_fee !== undefined && contract.extracted_data?.cancellation_fee !== null
-              ? `$${Number(contract.extracted_data.cancellation_fee).toFixed(2)}`
+            {contract.extractedData?.cancellationFee !== undefined && contract.extractedData?.cancellationFee !== null
+              ? `$${Number(contract.extractedData.cancellationFee).toFixed(2)}`
               : 'Not extracted'}
           </p>
-          {contract.extracted_data?.cancellation_fee_source && (
+          {contract.extractedData?.cancellationFeeSource && (
             <>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                {typeof contract.extracted_data.cancellation_fee_source === 'string'
-                  ? contract.extracted_data.cancellation_fee_source
-                  : JSON.stringify(contract.extracted_data.cancellation_fee_source)}
+                {typeof contract.extractedData.cancellationFeeSource === 'string'
+                  ? contract.extractedData.cancellationFeeSource
+                  : JSON.stringify(contract.extractedData.cancellationFeeSource)}
               </p>
               {onJumpToField && (
                 <button
@@ -218,8 +218,8 @@ export const ExtractedDataPanel = ({
               )}
             </>
           )}
-          {contract.extracted_data?.cancellation_fee_confidence &&
-           contract.extracted_data.cancellation_fee_confidence < 90 && (
+          {contract.extractedData?.cancellationFeeConfidence &&
+           contract.extractedData.cancellationFeeConfidence < 90 && (
             <div className="mt-2 p-2 bg-warning-100 dark:bg-warning-900/20 rounded">
               <p className="text-xs text-warning-700 dark:text-warning-400">
                 ⚠ Lower confidence - manual verification recommended

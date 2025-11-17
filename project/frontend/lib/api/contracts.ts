@@ -4,6 +4,7 @@ import { apiClient } from './client';
  * Type definitions for Contract API responses
  */
 export interface ExtractedData {
+  extractionId: string;
   gapPremium: number;
   gapPremiumConfidence?: number;
   gapPremiumSource?: any;
@@ -14,6 +15,14 @@ export interface ExtractedData {
   cancellationFeeConfidence?: number;
   cancellationFeeSource?: any;
   status?: 'pending' | 'approved';
+  // Audit metadata
+  llmModelVersion?: string;
+  llmProvider?: string;
+  processingTimeMs?: number;
+  extractedAt?: string;
+  extractedBy?: string;
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 export interface AuditInfo {
