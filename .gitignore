@@ -5,3 +5,4 @@ python_lint_errors.json
 *.log
 *.pyc
 .coverage
+.env
