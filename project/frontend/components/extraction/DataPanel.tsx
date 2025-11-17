@@ -188,7 +188,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({
               className={`w-full px-4 py-3 rounded-lg font-semibold text-white transition-colors ${
                 isDisabled
                   ? 'bg-neutral-300 cursor-not-allowed'
-                  : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+                  : 'bg-[#954293] hover:bg-[#7a3678] focus:outline-none focus:ring-2 focus:ring-[#954293] focus:ring-offset-2'
               }`}
             >
               {correctionsCount > 0 ? (

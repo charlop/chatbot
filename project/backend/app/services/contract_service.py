@@ -212,18 +212,18 @@ class ContractService:
                     else None
                 ),
                 "gap_premium_confidence": (
-                    float(extraction.gap_insurance_premium_confidence)
-                    if extraction.gap_insurance_premium_confidence is not None
+                    float(extraction.gap_premium_confidence)
+                    if extraction.gap_premium_confidence is not None
                     else None
                 ),
-                "gap_premium_source": extraction.gap_insurance_premium_source,
+                "gap_premium_source": extraction.gap_premium_source,
                 "refund_method": extraction.refund_calculation_method,
                 "refund_method_confidence": (
-                    float(extraction.refund_calculation_method_confidence)
-                    if extraction.refund_calculation_method_confidence is not None
+                    float(extraction.refund_method_confidence)
+                    if extraction.refund_method_confidence is not None
                     else None
                 ),
-                "refund_method_source": extraction.refund_calculation_method_source,
+                "refund_method_source": extraction.refund_method_source,
                 "cancellation_fee": (
                     float(extraction.cancellation_fee)
                     if extraction.cancellation_fee is not None
@@ -235,6 +235,7 @@ class ContractService:
                     else None
                 ),
                 "cancellation_fee_source": extraction.cancellation_fee_source,
+                "status": extraction.status,
             }
 
         return ContractResponse(**response_dict)

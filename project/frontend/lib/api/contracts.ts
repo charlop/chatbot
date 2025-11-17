@@ -4,15 +4,16 @@ import { apiClient } from './client';
  * Type definitions for Contract API responses
  */
 export interface ExtractedData {
-  gap_premium: number;
-  gap_premium_confidence?: number;
-  gap_premium_source?: string;
-  refund_method: string;
-  refund_method_confidence?: number;
-  refund_method_source?: string;
-  cancellation_fee: number;
-  cancellation_fee_confidence?: number;
-  cancellation_fee_source?: string;
+  gapPremium: number;
+  gapPremiumConfidence?: number;
+  gapPremiumSource?: any;
+  refundMethod: string;
+  refundMethodConfidence?: number;
+  refundMethodSource?: any;
+  cancellationFee: number;
+  cancellationFeeConfidence?: number;
+  cancellationFeeSource?: any;
+  status?: 'pending' | 'approved';
 }
 
 export interface AuditInfo {
@@ -45,6 +46,7 @@ export interface Contract {
   customerName?: string;
   vehicleInfo?: Record<string, any>;
   vehicle_info?: Record<string, any>;
+  extractedData?: ExtractedData;
   extracted_data?: ExtractedData;
   audit_info?: AuditInfo;
   status?: string;

@@ -5,7 +5,7 @@ Contract repository for contract-specific database operations.
 from typing import List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 
 from app.repositories.base import BaseRepository
 from app.models.database.contract import Contract
@@ -50,7 +50,7 @@ class ContractRepository(BaseRepository[Contract]):
         stmt = (
             select(Contract)
             .where(Contract.account_number == account_number)
-            .options(selectinload(Contract.extractions))
+            .options(joinedload(Contract.extractions))
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -68,7 +68,7 @@ class ContractRepository(BaseRepository[Contract]):
         stmt = (
             select(Contract)
             .where(Contract.contract_id == contract_id)
-            .options(selectinload(Contract.extractions))
+            .options(joinedload(Contract.extractions))
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()

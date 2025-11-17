@@ -25,11 +25,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
 
     const variantStyles = {
-      primary: 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500',
+      primary: 'bg-[#954293] text-white hover:bg-[#650360] focus:ring-[#954293]',
       secondary: 'bg-neutral-100 text-neutral-900 hover:bg-neutral-200 focus:ring-neutral-500',
-      success: 'bg-success-500 text-white hover:bg-success-600 focus:ring-success-500',
-      danger: 'bg-danger-500 text-white hover:bg-danger-600 focus:ring-danger-500',
-      outline: 'border-2 border-primary-500 bg-transparent text-primary-500 hover:bg-primary-50 focus:ring-primary-500',
+      success: 'bg-[#2da062] text-white hover:bg-[#40bd70] focus:ring-[#2da062]',
+      danger: 'bg-[#d63440] text-white hover:bg-[#c02e39] focus:ring-[#d63440]',
+      outline: 'border-2 border-[#954293] bg-transparent text-[#954293] hover:bg-[#fee6ff] focus:ring-[#954293]',
     };
 
     const sizeStyles = {

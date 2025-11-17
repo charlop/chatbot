@@ -17,18 +17,20 @@ class ContractSearchRequest(BaseModel):
 
     account_number: str = Field(
         ...,
-        min_length=12,
-        max_length=12,
         description="Account number to search for (12 digits, e.g., 000000000001)",
     )
 
-    @field_validator("account_number")
+    @field_validator("account_number", mode="before")
     @classmethod
     def validate_account_number(cls, v: str) -> str:
         """
         Validate account number is exactly 12 digits.
         Format: 12 numeric digits (e.g., 000000000001)
+        Strips whitespace before validation.
         """
+        if not isinstance(v, str):
+            raise ValueError("Account number must be a string")
+
         v = v.strip()
 
         # Check if empty

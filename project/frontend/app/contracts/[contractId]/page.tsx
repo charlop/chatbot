@@ -34,7 +34,7 @@ export default function ContractDetailsPage() {
         setError(null);
         const data = await getContract(contractId);
         console.log('Contract data received:', data);
-        console.log('Extracted data:', data.extracted_data);
+        console.log('Extracted data:', data.extractedData);
         setContract(data);
       } catch (err) {
         const apiError = err as ApiError;
@@ -71,7 +71,7 @@ export default function ContractDetailsPage() {
   };
 
   const handleSubmit = async (corrections: FieldCorrection[], notes?: string) => {
-    if (!contract?.extracted_data) {
+    if (!contract?.extractedData) {
       showError('No extraction data available');
       return;
     }
@@ -154,20 +154,26 @@ export default function ContractDetailsPage() {
   }
 
   // Transform contract data to Extraction format for DataPanel
-  const extraction: Extraction | null = contract?.extracted_data
+  const extraction: Extraction | null = contract?.extractedData
     ? {
         id: contract.id || contractId,
         contractId: contract.contractId,
-        gap_premium: contract.extracted_data.gap_premium || 0,
-        gap_premium_confidence: contract.extracted_data.gap_premium_confidence,
-        gap_premium_source: contract.extracted_data.gap_premium_source,
-        refund_method: contract.extracted_data.refund_method || '',
-        refund_method_confidence: contract.extracted_data.refund_method_confidence,
-        refund_method_source: contract.extracted_data.refund_method_source,
-        cancellation_fee: contract.extracted_data.cancellation_fee || 0,
-        cancellation_fee_confidence: contract.extracted_data.cancellation_fee_confidence,
-        cancellation_fee_source: contract.extracted_data.cancellation_fee_source,
-        status: (contract.status as 'pending' | 'approved') || 'pending',
+        gap_premium: contract.extractedData.gapPremium || 0,
+        gap_premium_confidence: contract.extractedData.gapPremiumConfidence,
+        gap_premium_source: contract.extractedData.gapPremiumSource
+          ? `Page ${contract.extractedData.gapPremiumSource.page}, Line ${contract.extractedData.gapPremiumSource.line}`
+          : undefined,
+        refund_method: contract.extractedData.refundMethod || '',
+        refund_method_confidence: contract.extractedData.refundMethodConfidence,
+        refund_method_source: contract.extractedData.refundMethodSource
+          ? `Page ${contract.extractedData.refundMethodSource.page}, Line ${contract.extractedData.refundMethodSource.line}`
+          : undefined,
+        cancellation_fee: contract.extractedData.cancellationFee || 0,
+        cancellation_fee_confidence: contract.extractedData.cancellationFeeConfidence,
+        cancellation_fee_source: contract.extractedData.cancellationFeeSource
+          ? `Page ${contract.extractedData.cancellationFeeSource.page}, Line ${contract.extractedData.cancellationFeeSource.line}`
+          : undefined,
+        status: (contract.extractedData.status as 'pending' | 'approved') || 'pending',
       }
     : null;
 

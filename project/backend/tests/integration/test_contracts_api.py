@@ -134,8 +134,8 @@ class TestContractRetrievalEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["contract_id"] == "GAP-2024-WITH-EXT"
-        assert data["extraction"] is not None
-        assert "gap_insurance_premium" in data["extraction"]
+        assert data["extracted_data"] is not None
+        assert "gap_premium" in data["extracted_data"]
 
     async def test_get_contract_exclude_extraction(
         self, async_client: AsyncClient, db_session: AsyncSession
@@ -155,8 +155,8 @@ class TestContractRetrievalEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["contract_id"] == "GAP-2024-NO-EXT"
-        # Extraction should be None (no extraction exists)
-        assert data.get("extraction") is None
+        # Extracted data should be None (no extraction exists)
+        assert data.get("extracted_data") is None
 
 
 @pytest.mark.integration

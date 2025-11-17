@@ -71,7 +71,7 @@ class ContractFactory:
 
         # Create extraction
         extraction = ExtractionFactory.build(contract_id=contract_id)
-        contract.extraction = extraction
+        contract.extractions = extraction
 
         return contract
 

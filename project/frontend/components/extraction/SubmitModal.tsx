@@ -121,7 +121,7 @@ export const SubmitModal: React.FC<SubmitModalProps> = ({
                       <div className="flex items-center gap-2 text-sm">
                         <span className="line-through text-neutral-500">{originalValue}</span>
                         <span className="text-neutral-400">→</span>
-                        <span className="font-medium text-primary">{newValue}</span>
+                        <span className="font-medium text-[#954293]">{newValue}</span>
                       </div>
                     </div>
                   );
@@ -150,7 +150,7 @@ export const SubmitModal: React.FC<SubmitModalProps> = ({
               maxLength={500}
               rows={4}
               aria-label="Notes (optional)"
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#954293] focus:border-[#954293] resize-none"
             />
             <div className="mt-1 text-xs text-neutral-500 text-right">
               {notes.length}/500 characters
@@ -170,7 +170,7 @@ export const SubmitModal: React.FC<SubmitModalProps> = ({
           <button
             type="button"
             onClick={handleSubmit}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-[#954293] rounded-lg hover:bg-[#7a3678] transition-colors focus:outline-none focus:ring-2 focus:ring-[#954293] focus:ring-offset-2"
           >
             Submit
           </button>
