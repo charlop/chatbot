@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export interface PDFViewerProps {
   contractId: string; // Changed from url - now loads PDF via backend proxy
   fileName?: string;
+  pageNumber?: number; // Optional page number to jump to
   onLoadSuccess?: () => void;
   onLoadError?: (error: Error) => void;
 }
@@ -23,14 +24,30 @@ export interface HighlightRegion {
 export const PDFViewer = ({
   contractId,
   fileName = 'Contract.pdf',
+  pageNumber,
   onLoadSuccess,
   onLoadError,
 }: PDFViewerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number | undefined>(pageNumber);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Construct backend PDF endpoint URL
   const pdfEndpoint = `/api/v1/contracts/${contractId}/pdf`;
+
+  // Update current page when pageNumber prop changes
+  useEffect(() => {
+    if (pageNumber !== undefined && pageNumber !== currentPage) {
+      setCurrentPage(pageNumber);
+
+      // Update iframe src to jump to page
+      if (iframeRef.current) {
+        const pageHash = pageNumber > 0 ? `#page=${pageNumber}` : '';
+        iframeRef.current.src = `${pdfEndpoint}${pageHash}#toolbar=1&navpanes=1&scrollbar=1`;
+      }
+    }
+  }, [pageNumber, currentPage, pdfEndpoint]);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -132,6 +149,7 @@ export const PDFViewer = ({
 
         {!error && (
           <iframe
+            ref={iframeRef}
             src={`${pdfEndpoint}#toolbar=1&navpanes=1&scrollbar=1`}
             className="w-full h-full border-0"
             title={fileName}

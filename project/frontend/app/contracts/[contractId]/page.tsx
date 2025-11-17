@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { PDFViewer } from '@/components/pdf/PDFViewer';
 import { DataPanel } from '@/components/extraction/DataPanel';
+import { ContractDetailsSkeleton } from '@/components/contract/ContractDetailsSkeleton';
 import { getContract, Contract } from '@/lib/api/contracts';
 import {
   submitExtraction,
@@ -26,6 +27,7 @@ export default function ContractDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPdfPage, setCurrentPdfPage] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     const fetchContract = async () => {
@@ -97,8 +99,21 @@ export default function ContractDetailsPage() {
   };
 
   const handleJumpToField = (source: string) => {
-    // TODO: Implement page jumping based on source location
-    console.log('Jump to field:', source);
+    // Parse source string to extract page number
+    // Format: "Page X, Line Y" or could be an object
+    try {
+      // Try to extract page number from string format "Page X, Line Y"
+      const pageMatch = source.match(/Page\s+(\d+)/i);
+      if (pageMatch) {
+        const pageNum = parseInt(pageMatch[1], 10);
+        console.log('Jumping to page:', pageNum);
+        setCurrentPdfPage(pageNum);
+      } else {
+        console.log('Could not parse page number from source:', source);
+      }
+    } catch (err) {
+      console.error('Error parsing source location:', err);
+    }
   };
 
   const handleBackToDashboard = () => {
@@ -108,12 +123,7 @@ export default function ContractDetailsPage() {
   if (isLoading) {
     return (
       <Layout title="Loading Contract">
-        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mx-auto mb-4"></div>
-            <p className="text-neutral-600 dark:text-neutral-400">Loading contract details...</p>
-          </div>
-        </div>
+        <ContractDetailsSkeleton />
       </Layout>
     );
   }
@@ -204,6 +214,7 @@ export default function ContractDetailsPage() {
           <PDFViewer
             contractId={contract.contractId}
             fileName={`${contract.accountNumber}.pdf`}
+            pageNumber={currentPdfPage}
           />
         </div>
 
