@@ -16,6 +16,8 @@ import {
 import { ApiError } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
+import { CollapsibleChat } from '@/components/chat/CollapsibleChat';
+import { useChat } from '@/hooks/useChat';
 
 export default function ContractDetailsPage() {
   const params = useParams();
@@ -28,6 +30,14 @@ export default function ContractDetailsPage() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPdfPage, setCurrentPdfPage] = useState<number | undefined>(undefined);
+
+  // Chat integration
+  const {
+    messages,
+    isLoading: isChatLoading,
+    error: chatError,
+    send: sendChatMessage,
+  } = useChat(contractId);
 
   useEffect(() => {
     const fetchContract = async () => {
@@ -346,6 +356,19 @@ export default function ContractDetailsPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Collapsible Chat - Fixed at bottom right */}
+      <div className="fixed bottom-4 right-4 w-96 shadow-2xl rounded-lg overflow-hidden z-50">
+        <CollapsibleChat
+          messages={messages}
+          onSendMessage={sendChatMessage}
+          contractId={contract.contractId}
+          accountNumber={contract.accountNumber}
+          isLoading={isChatLoading}
+          error={chatError?.message}
+          defaultExpanded={false}
+        />
       </div>
     </Layout>
   );

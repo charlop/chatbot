@@ -242,6 +242,31 @@ else
 fi
 
 ################################################################################
+# Step 2.5: Setup S3 (LocalStack) with Test PDFs
+################################################################################
+
+if [ "$SEED_DB" = true ]; then
+    print_header "Step 2.5: Setting up LocalStack S3"
+
+    # Wait for LocalStack to be healthy
+    print_info "Waiting for LocalStack S3 to be ready..."
+    if wait_for_service localhost 4566 "LocalStack"; then
+        print_success "LocalStack is ready"
+
+        print_info "Creating S3 bucket and uploading test PDFs..."
+        cd "$BACKEND_DIR"
+        uv run python scripts/setup_s3.py --all
+
+        print_success "S3 setup completed"
+    else
+        print_warning "LocalStack not available, skipping S3 setup"
+        print_info "PDFs will not be available until S3 is set up"
+    fi
+
+    echo ""
+fi
+
+################################################################################
 # Step 3: Start Backend API
 ################################################################################
 
@@ -253,7 +278,11 @@ kill_process_on_port $BACKEND_PORT "Backend API"
 print_info "Starting FastAPI server on port $BACKEND_PORT..."
 cd "$BACKEND_DIR"
 
-# Start backend in background
+# Start backend in background with S3 environment variables for LocalStack
+AWS_ENDPOINT_URL=http://localhost:4566 \
+AWS_ACCESS_KEY_ID=test \
+AWS_SECRET_ACCESS_KEY=test \
+AWS_DEFAULT_REGION=us-east-1 \
 nohup uv run uvicorn app.main:app --host 0.0.0.0 --port $BACKEND_PORT > /tmp/backend.log 2>&1 &
 BACKEND_PID=$!
 

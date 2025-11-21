@@ -25,11 +25,14 @@ export const useChat = (contractId: string | null) => {
       content: message,
       timestamp: new Date().toISOString(),
     };
-    setMessages(prev => [...prev, userMessage]);
+
+    // Create updated messages array for API call
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
 
     try {
-      // Send message to API with current history
-      const response = await sendMessage(contractId, message, messages);
+      // Send message to API with current history (including the new user message)
+      const response = await sendMessage(contractId, message, updatedMessages);
 
       // Add assistant response
       const assistantMessage: ChatMessage = {

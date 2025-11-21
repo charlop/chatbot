@@ -24,6 +24,10 @@ anthropic==0.39.0
 # Redis cache
 redis==5.0.1
 
+# AWS S3 / LocalStack
+boto3==1.34.51
+reportlab==4.0.9  # For generating test PDFs
+
 # Testing
 pytest==7.4.4
 pytest-asyncio==0.23.3

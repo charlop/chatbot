@@ -2,13 +2,14 @@
 S3 Service - PDF Streaming from S3 with Redis Caching.
 
 Handles:
-- Streaming PDFs from S3 with IAM authentication
+- Streaming PDFs from S3 with IAM authentication (or LocalStack for local dev)
 - Redis caching (TTL: 15 minutes)
 - Error handling for S3 operations
 """
 
 import io
 import logging
+import os
 from typing import BinaryIO
 
 import boto3
@@ -44,19 +45,39 @@ class S3Service:
 
     Provides:
     - PDF streaming from S3 with IAM authentication
+    - LocalStack support for local development
     - Redis caching to reduce S3 bandwidth costs
     - Comprehensive error handling
     """
 
     def __init__(self):
-        """Initialize S3 client with IAM credentials."""
-        self.s3_client = boto3.client(
-            "s3",
-            # Credentials are automatically discovered from:
-            # 1. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
-            # 2. ~/.aws/credentials file
-            # 3. IAM instance profile (when running on EC2/ECS)
-        )
+        """
+        Initialize S3 client with IAM credentials.
+
+        Supports LocalStack for local development when AWS_ENDPOINT_URL is set.
+        """
+        # Check for LocalStack endpoint (for local development)
+        endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+
+        if endpoint_url:
+            logger.info(f"Using LocalStack S3 endpoint: {endpoint_url}")
+            self.s3_client = boto3.client(
+                "s3",
+                endpoint_url=endpoint_url,
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test"),
+                region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
+            )
+        else:
+            logger.info("Using AWS S3 (production mode)")
+            self.s3_client = boto3.client(
+                "s3",
+                # Credentials are automatically discovered from:
+                # 1. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+                # 2. ~/.aws/credentials file
+                # 3. IAM instance profile (when running on EC2/ECS)
+            )
+
         self.cache_ttl = 900  # 15 minutes in seconds
         self.cache_key_prefix = "pdf"
 

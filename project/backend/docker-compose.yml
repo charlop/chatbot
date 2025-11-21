@@ -38,6 +38,28 @@ services:
     networks:
       - contract-network
 
+  # LocalStack S3 for local development
+  localstack:
+    image: localstack/localstack:latest
+    container_name: contract-localstack
+    ports:
+      - "4566:4566"  # LocalStack gateway
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./localstack:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - contract-network
+
   # pgAdmin for database management (optional)
   pgadmin:
     image: dpage/pgadmin4:latest
