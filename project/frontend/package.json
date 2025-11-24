@@ -16,7 +16,7 @@
   "dependencies": {
     "@auth0/auth0-react": "^2.8.0",
     "axios": "^1.13.2",
-    "next": "15.1.4",
+    "next": "15.5.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.66.0",

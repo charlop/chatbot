@@ -33,8 +33,9 @@ export const PDFViewer = ({
   const [currentPage, setCurrentPage] = useState<number | undefined>(pageNumber);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Construct backend PDF endpoint URL
-  const pdfEndpoint = `/api/v1/contracts/${contractId}/pdf`;
+  // Construct backend PDF endpoint URL using environment variable
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001/api/v1';
+  const pdfEndpoint = `${API_BASE_URL}/contracts/${contractId}/pdf`;
 
   // Update current page when pageNumber prop changes
   useEffect(() => {

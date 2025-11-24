@@ -430,7 +430,7 @@ def upload_test_pdfs():
         )
 
         # Upload to S3
-        s3_key = f"contracts/2024/{account_number}/{contract_id}.pdf"
+        s3_key = f"contracts/2024/{contract_id}.pdf"
 
         try:
             s3_client.put_object(
@@ -442,7 +442,7 @@ def upload_test_pdfs():
             print(f"  ❌ Failed to upload {contract_id}.pdf: {e}")
 
     print("=" * 60)
-    print(f"✅ Uploaded {uploaded_count}/15 PDFs to s3://{S3_BUCKET}/contracts/2024/")
+    print(f"✅ Uploaded {uploaded_count}/15 PDFs to s3://{S3_BUCKET}")
     return uploaded_count == 15
 
 
@@ -451,7 +451,7 @@ def list_uploaded_pdfs():
     s3_client = get_s3_client()
 
     try:
-        response = s3_client.list_objects_v2(Bucket=S3_BUCKET, Prefix="contracts/2024/")
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET)
 
         if "Contents" in response:
             print("\n📂 Uploaded PDFs:")
