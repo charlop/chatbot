@@ -5,7 +5,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
   title: "Contract Refund Eligibility System",
-  description: "AI-powered contract review and refund eligibility determination",
+  description: "Contract review and refund eligibility determination",
   icons: {
     icon: '/favicon.ico',
   },
