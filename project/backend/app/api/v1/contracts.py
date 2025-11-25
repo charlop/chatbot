@@ -1,5 +1,5 @@
 """
-Contract API endpoints for searching and retrieving contract information.
+Contract Template API endpoints for searching and retrieving contract templates.
 """
 
 import logging
@@ -22,18 +22,19 @@ router = APIRouter()
     "/contracts/search",
     response_model=ContractResponse,
     status_code=status.HTTP_200_OK,
-    summary="Search for a contract",
+    summary="Search for a contract template",
     description=(
-        "Search for a contract by account number. "
-        "Returns contract metadata if found, 404 if not found."
+        "Search for a contract template by account number OR template ID. "
+        "Account number search uses hybrid cache strategy (Redis → DB → External API). "
+        "Returns template metadata if found, 404 if not found."
     ),
     responses={
         200: {
-            "description": "Contract found",
+            "description": "Contract template found",
             "model": ContractResponse,
         },
         404: {
-            "description": "Contract not found",
+            "description": "Contract template not found",
             "model": ErrorResponse,
         },
         400: {
@@ -47,62 +48,77 @@ async def search_contract(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Search for a contract by account number.
+    Search for a contract template by account number or template ID.
 
-    Flow:
-    1. Validate account number
-    2. Check cache (Redis) for contract
-    3. Query database for contract
-    4. If not found, query external RDB (mocked for now)
-    5. Store in database if found externally
-    6. Log audit event
-    7. Return contract metadata
+    **Account Number Search Flow (Hybrid Cache):**
+    1. Check Redis cache (fast path)
+    2. Check account_mappings table (DB cache)
+    3. Call external API (fallback)
+    4. Cache result in Redis + DB
+    5. Fetch template details
+
+    **Template ID Search Flow:**
+    1. Direct database lookup
+    2. Cache template in Redis
 
     Args:
-        search_request: Contract search request with account number
+        search_request: Search request with account_number OR contract_id
         db: Database session (injected)
 
     Returns:
-        ContractResponse with contract metadata
+        ContractResponse with template metadata
 
     Raises:
-        HTTPException 404: If contract not found
-        HTTPException 400: If account number is invalid
+        HTTPException 404: If template not found
+        HTTPException 400: If search parameters are invalid
     """
-    logger.info(f"POST /contracts/search - account_number: {search_request.account_number}")
+    # Build log message based on search type
+    if search_request.account_number:
+        search_param = f"account_number: {search_request.account_number}"
+    else:
+        search_param = f"contract_id: {search_request.contract_id}"
+
+    logger.info(f"POST /contracts/search - {search_param}")
 
     # Initialize service
     contract_service = ContractService(db)
 
-    # Search for contract
-    contract = await contract_service.search_contract(search_request)
+    # Search for template
+    template = await contract_service.search_contract(search_request)
 
-    if not contract:
+    if not template:
+        if search_request.account_number:
+            detail = (
+                f"No contract template found for account number: {search_request.account_number}"
+            )
+        else:
+            detail = f"Contract template not found: {search_request.contract_id}"
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Contract not found for account number: {search_request.account_number}",
+            detail=detail,
         )
 
-    return contract
+    return template
 
 
 @router.get(
     "/contracts/{contract_id}",
     response_model=ContractResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get contract by ID",
+    summary="Get contract template by ID",
     description=(
-        "Retrieve a contract by its ID. "
+        "Retrieve a contract template by its ID. "
         "Includes extraction data if available. "
-        "Returns 404 if contract not found."
+        "Returns 404 if template not found."
     ),
     responses={
         200: {
-            "description": "Contract found",
+            "description": "Contract template found",
             "model": ContractResponse,
         },
         404: {
-            "description": "Contract not found",
+            "description": "Contract template not found",
             "model": ErrorResponse,
         },
     },
@@ -113,46 +129,46 @@ async def get_contract(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Retrieve a contract by ID.
+    Retrieve a contract template by ID.
 
     Args:
-        contract_id: Contract ID
+        contract_id: Contract template ID
         include_extraction: Whether to include extraction data (default: True)
         db: Database session (injected)
 
     Returns:
-        ContractResponse with contract metadata and optional extraction
+        ContractResponse with template metadata and optional extraction
 
     Raises:
-        HTTPException 404: If contract not found
+        HTTPException 404: If template not found
     """
     logger.info(f"GET /contracts/{contract_id} - include_extraction: {include_extraction}")
 
     # Initialize service
     contract_service = ContractService(db)
 
-    # Retrieve contract
-    contract = await contract_service.get_contract(contract_id, include_extraction)
+    # Retrieve template
+    template = await contract_service.get_template_by_id(contract_id, include_extraction)
 
-    if not contract:
+    if not template:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Contract not found: {contract_id}",
+            detail=f"Contract template not found: {contract_id}",
         )
 
-    return contract
+    return template
 
 
 @router.get(
     "/contracts/{contract_id}/pdf",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
-    summary="Stream contract PDF",
+    summary="Stream contract template PDF",
     description=(
-        "Stream contract PDF from S3 with IAM authentication. "
+        "Stream contract template PDF from S3 with IAM authentication. "
         "PDFs are cached in Redis for 15 minutes. "
         "Returns PDF binary stream with content-type: application/pdf. "
-        "Returns 404 if contract or PDF not found."
+        "Returns 404 if template or PDF not found."
     ),
     responses={
         200: {
@@ -160,7 +176,7 @@ async def get_contract(
             "content": {"application/pdf": {}},
         },
         404: {
-            "description": "Contract or PDF not found",
+            "description": "Contract template or PDF not found",
             "model": ErrorResponse,
         },
         403: {
@@ -174,48 +190,48 @@ async def stream_contract_pdf(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Stream contract PDF from S3.
+    Stream contract template PDF from S3.
 
     Flow:
-    1. Query database for contract and S3 location
+    1. Query database for template and S3 location
     2. Check Redis cache for PDF
     3. If cache miss, fetch from S3 with IAM credentials
     4. Cache PDF in Redis (TTL: 15 minutes)
     5. Stream PDF to client
 
     Args:
-        contract_id: Contract ID
+        contract_id: Contract template ID
         db: Database session (injected)
 
     Returns:
         StreamingResponse with PDF binary stream
 
     Raises:
-        HTTPException 404: If contract or PDF not found
+        HTTPException 404: If template or PDF not found
         HTTPException 403: If access to PDF is denied
         HTTPException 500: If S3 error occurs
     """
-    logger.info(f"GET /contracts/{contract_id}/pdf - Streaming PDF")
+    logger.info(f"GET /contracts/{contract_id}/pdf - Streaming template PDF")
 
-    # Get contract from database to retrieve S3 location
+    # Get template from database to retrieve S3 location
     contract_service = ContractService(db)
-    contract = await contract_service.get_contract(contract_id, include_extraction=False)
+    template = await contract_service.get_template_by_id(contract_id, include_extraction=False)
 
-    if not contract:
+    if not template:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Contract not found: {contract_id}",
+            detail=f"Contract template not found: {contract_id}",
         )
 
-    # Get S3 location from contract
-    s3_bucket = contract.s3_bucket
-    s3_key = contract.s3_key
+    # Get S3 location from template
+    s3_bucket = template.s3_bucket
+    s3_key = template.s3_key
 
     if not s3_bucket or not s3_key:
-        logger.error(f"Contract {contract_id} missing S3 location (bucket or key is null)")
+        logger.error(f"Template {contract_id} missing S3 location (bucket or key is null)")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Contract PDF location not configured",
+            detail="Template PDF location not configured",
         )
 
     # Stream PDF from S3 with caching
@@ -227,7 +243,7 @@ async def stream_contract_pdf(
         # Log cache status
         cache_status = "HIT" if cache_hit else "MISS"
         logger.info(
-            f"Streaming PDF for contract {contract_id} "
+            f"Streaming PDF for template {contract_id} "
             f"(s3://{s3_bucket}/{s3_key}, cache: {cache_status})"
         )
 
@@ -245,21 +261,21 @@ async def stream_contract_pdf(
         )
 
     except S3ObjectNotFoundError:
-        logger.error(f"PDF not found in S3 for contract {contract_id}: s3://{s3_bucket}/{s3_key}")
+        logger.error(f"PDF not found in S3 for template {contract_id}: s3://{s3_bucket}/{s3_key}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"PDF not found for contract: {contract_id}",
+            detail=f"PDF not found for template: {contract_id}",
         )
 
     except S3AccessDeniedError:
-        logger.error(f"Access denied to PDF for contract {contract_id}: s3://{s3_bucket}/{s3_key}")
+        logger.error(f"Access denied to PDF for template {contract_id}: s3://{s3_bucket}/{s3_key}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Access denied to PDF for contract: {contract_id}",
+            detail=f"Access denied to PDF for template: {contract_id}",
         )
 
     except Exception as e:
-        logger.error(f"Error streaming PDF for contract {contract_id}: {e}")
+        logger.error(f"Error streaming PDF for template {contract_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to stream PDF",

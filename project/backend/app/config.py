@@ -65,8 +65,38 @@ class Settings(BaseSettings):
     # External Services
     external_rdb_api_url: str = Field(default="http://localhost:8001/api/contracts")
     external_rdb_api_key: str = Field(default="mock-key")
+    external_rdb_timeout: int = Field(
+        default=5, description="External RDB request timeout in seconds"
+    )
+    external_rdb_retry_attempts: int = Field(
+        default=3, description="Number of retry attempts for External RDB"
+    )
+    external_rdb_cache_ttl: int = Field(
+        default=3600, description="External RDB mapping cache TTL in seconds (1 hour)"
+    )
+    external_rdb_mock_mode: bool = Field(
+        default=True,
+        description="Use mock mode for External RDB (simulates with local DB)",
+    )
+    enable_external_rdb: bool = Field(default=True, description="Enable External RDB integration")
+    enable_hybrid_cache: bool = Field(
+        default=True, description="Enable hybrid cache strategy (Redis + DB + External)"
+    )
+
     document_repo_api_url: str = Field(default="http://localhost:8002/api/documents")
     document_repo_api_key: str = Field(default="mock-key")
+
+    # S3 Storage
+    s3_bucket_name: str = Field(
+        default="contract-templates-dev", description="S3 bucket for contract template PDFs"
+    )
+    s3_region: str = Field(default="us-east-1", description="AWS region for S3")
+    s3_endpoint_url: str | None = Field(
+        default=None, description="S3 endpoint URL (for LocalStack/MinIO)"
+    )
+    s3_use_localstack: bool = Field(
+        default=True, description="Use LocalStack for local S3 development"
+    )
 
     # Testing
     test_database_url: str | None = Field(default=None)

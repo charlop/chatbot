@@ -11,23 +11,30 @@ from uuid import UUID
 
 class ContractSearchRequest(BaseModel):
     """
-    Request schema for contract search endpoint.
-    Validates account number format.
+    Request schema for contract template search endpoint.
+    Supports searching by account number OR template ID (mutually exclusive).
     """
 
-    account_number: str = Field(
-        ...,
+    account_number: str | None = Field(
+        default=None,
         description="Account number to search for (12 digits, e.g., 000000000001)",
+    )
+    contract_id: str | None = Field(
+        default=None,
+        description="Contract template ID to search for (e.g., GAP-2024-TEMPLATE-001)",
     )
 
     @field_validator("account_number", mode="before")
     @classmethod
-    def validate_account_number(cls, v: str) -> str:
+    def validate_account_number(cls, v: str | None) -> str | None:
         """
         Validate account number is exactly 12 digits.
         Format: 12 numeric digits (e.g., 000000000001)
         Strips whitespace before validation.
         """
+        if v is None:
+            return v
+
         if not isinstance(v, str):
             raise ValueError("Account number must be a string")
 
@@ -46,11 +53,41 @@ class ContractSearchRequest(BaseModel):
 
         return v
 
+    @field_validator("contract_id", mode="before")
+    @classmethod
+    def validate_contract_id(cls, v: str | None) -> str | None:
+        """
+        Validate contract template ID format.
+        """
+        if v is None:
+            return v
+
+        if not isinstance(v, str):
+            raise ValueError("Contract ID must be a string")
+
+        v = v.strip()
+
+        if not v:
+            raise ValueError("Contract ID cannot be empty or whitespace")
+
+        # Validate length
+        if len(v) > 100:
+            raise ValueError(f"Contract ID too long (max 100 chars), got {len(v)}")
+
+        return v
+
+    def model_post_init(self, __context):
+        """Validate exactly one search parameter is provided."""
+        if not self.account_number and not self.contract_id:
+            raise ValueError("Either account_number or contract_id must be provided")
+        if self.account_number and self.contract_id:
+            raise ValueError("Cannot provide both account_number and contract_id")
+
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {"account_number": "000000000001"},
-                {"account_number": "123456789012"},
+                {"contract_id": "GAP-2024-TEMPLATE-001"},
             ]
         }
     }

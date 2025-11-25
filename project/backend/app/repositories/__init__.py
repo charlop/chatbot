@@ -8,6 +8,7 @@ from app.repositories.contract_repository import ContractRepository
 from app.repositories.extraction_repository import ExtractionRepository
 from app.repositories.correction_repository import CorrectionRepository
 from app.repositories.audit_repository import AuditRepository
+from app.repositories.account_mapping_repository import AccountMappingRepository
 
 __all__ = [
     "BaseRepository",
@@ -15,4 +16,5 @@ __all__ = [
     "ExtractionRepository",
     "CorrectionRepository",
     "AuditRepository",
+    "AccountMappingRepository",
 ]

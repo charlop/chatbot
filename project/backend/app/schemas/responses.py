@@ -14,15 +14,18 @@ from uuid import UUID
 
 class ContractResponse(BaseModel):
     """
-    Response schema for contract data.
-    Includes all contract metadata and S3 storage information.
+    Response schema for contract template data.
+    Includes all template metadata and S3 storage information.
 
-    NOTE: PDFs are accessed via GET /api/v1/contracts/{contract_id}/pdf endpoint
+    NOTE: This is a TEMPLATE, not a customer contract.
+    Templates contain placeholders like [CUSTOMER NAME], [VIN NUMBER], etc.
+    Account numbers are mapped to templates via separate mapping table.
+
+    PDFs are accessed via GET /api/v1/contracts/{contract_id}/pdf endpoint
     (backend proxy with IAM authentication), not via direct URL.
     """
 
-    contract_id: str
-    account_number: str
+    contract_id: str  # Template ID (e.g., GAP-2024-TEMPLATE-001)
 
     # S3 Storage (for backend use and debugging)
     s3_bucket: str
@@ -32,12 +35,16 @@ class ContractResponse(BaseModel):
     text_extraction_status: str | None = None  # 'pending', 'completed', 'failed'
     text_extracted_at: datetime | None = None
 
-    # Contract Metadata
+    # Template Metadata
     document_repository_id: str | None = None
-    contract_type: str
-    contract_date: date | None = None
-    customer_name: str | None = None
-    vehicle_info: dict | None = None
+    contract_type: str  # GAP, VSC, etc.
+    contract_date: date | None = None  # When template was created
+
+    # Template Versioning
+    template_version: str | None = None  # e.g., "1.0", "2.0"
+    effective_date: date | None = None  # When this version became active
+    deprecated_date: date | None = None  # When this version was superseded
+    is_active: bool = True  # Whether this template version is currently active
 
     # Timestamps
     created_at: datetime
@@ -52,19 +59,17 @@ class ContractResponse(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "contract_id": "TEST-001",
-                    "account_number": "ACC-12345",
-                    "s3_bucket": "contracts-production",
-                    "s3_key": "contracts/2024/11/TEST-001.pdf",
+                    "contract_id": "GAP-2024-TEMPLATE-001",
+                    "s3_bucket": "contract-templates-dev",
+                    "s3_key": "templates/GAP-2024-TEMPLATE-001.pdf",
                     "text_extraction_status": "completed",
                     "text_extracted_at": "2025-11-15T10:00:00Z",
                     "contract_type": "GAP",
-                    "customer_name": "John Doe",
-                    "vehicle_info": {
-                        "make": "Toyota",
-                        "model": "Camry",
-                        "year": 2020,
-                    },
+                    "contract_date": "2024-01-15",
+                    "template_version": "1.0",
+                    "effective_date": "2024-01-15",
+                    "deprecated_date": None,
+                    "is_active": True,
                     "created_at": "2025-11-11T10:00:00Z",
                     "updated_at": "2025-11-11T10:00:00Z",
                 }
