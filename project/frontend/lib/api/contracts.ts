@@ -1,7 +1,10 @@
 import { apiClient } from './client';
 
 /**
- * Type definitions for Contract API responses
+ * Type definitions for Contract Template API responses
+ *
+ * NOTE: These are contract TEMPLATES, not filled customer contracts.
+ * Templates contain placeholders like [CUSTOMER NAME], [VIN NUMBER], etc.
  */
 export interface ExtractedData {
   extractionId: string;
@@ -33,10 +36,9 @@ export interface AuditInfo {
   corrections_made?: number;
 }
 
-export interface Contract {
+export interface ContractTemplate {
   id: string;
-  contractId: string;
-  accountNumber: string;
+  contractId: string; // Template ID (e.g., GAP-2024-TEMPLATE-001)
 
   // S3 Storage (for backend use and debugging)
   s3Bucket?: string;
@@ -46,30 +48,37 @@ export interface Contract {
   textExtractionStatus?: string; // 'pending', 'completed', 'failed'
   textExtractedAt?: string;
 
+  // Template Metadata
   documentRepositoryId?: string;
-  contract_type?: string;
-  contractType?: string;
-  contract_date?: string;
-  contractDate?: string;
-  customer_name?: string;
-  customerName?: string;
-  vehicleInfo?: Record<string, any>;
-  vehicle_info?: Record<string, any>;
+  contractType?: string; // GAP, VSC, etc.
+  contractDate?: string; // When template was created
+
+  // Template Versioning
+  templateVersion?: string; // e.g., "1.0", "2.0"
+  effectiveDate?: string; // When this version became active
+  deprecatedDate?: string; // When this version was superseded
+  isActive?: boolean; // Whether this template version is currently active
+
+  // Extracted data from template
   extractedData?: ExtractedData;
   extracted_data?: ExtractedData;
   audit_info?: AuditInfo;
   status?: string;
-  created_at?: string;
+
+  // Timestamps
   createdAt?: string;
-  updated_at?: string;
+  created_at?: string;
   updatedAt?: string;
+  updated_at?: string;
   lastSyncedAt?: string;
   last_synced_at?: string;
 }
 
+// Alias for backward compatibility
+export type Contract = ContractTemplate;
+
 export interface SearchContractResponse {
-  contractId: string;
-  accountNumber: string;
+  contractId: string; // Template ID
 
   // S3 Storage (for backend use and debugging)
   s3Bucket?: string;
@@ -79,25 +88,39 @@ export interface SearchContractResponse {
   textExtractionStatus?: string;
   textExtractedAt?: string;
 
+  // Template Metadata
   documentRepositoryId?: string;
   contractType: string;
   contractDate?: string;
-  customerName?: string;
-  vehicleInfo?: Record<string, any>;
+
+  // Template Versioning
+  templateVersion?: string;
+  effectiveDate?: string;
+  deprecatedDate?: string;
+  isActive?: boolean;
+
+  // Timestamps
   createdAt: string;
   updatedAt: string;
   lastSyncedAt?: string;
 }
 
 /**
- * Search for a contract by account number
- * @param accountNumber - The account number to search for (format: XXX-XXXX-XXXXX or 12 digits)
- * @returns Promise with contract search results
+ * Search for a contract template by account number
+ *
+ * Account number search uses hybrid cache strategy:
+ * 1. Check Redis cache (fast path)
+ * 2. Check account_mappings table (DB cache)
+ * 3. Call external API (fallback)
+ * 4. Fetch template details
+ *
+ * @param accountNumber - The account number to search for (12 digits)
+ * @returns Promise with contract template search results
  */
-export const searchContract = async (
+export const searchContractByAccount = async (
   accountNumber: string
 ): Promise<SearchContractResponse> => {
-  // Strip dashes - backend expects only digits
+  // Strip dashes and non-digits - backend expects only digits
   const cleanedAccountNumber = accountNumber.replace(/\D/g, '');
 
   // Backend expects snake_case
@@ -108,9 +131,44 @@ export const searchContract = async (
 };
 
 /**
- * Get contract details by contract ID
- * @param contractId - The contract ID
- * @returns Promise with full contract details including extracted data and audit info
+ * Search for a contract template by template ID
+ *
+ * @param contractId - The contract template ID (e.g., GAP-2024-TEMPLATE-001)
+ * @returns Promise with contract template search results
+ */
+export const searchContractById = async (
+  contractId: string
+): Promise<SearchContractResponse> => {
+  const response = await apiClient.post<SearchContractResponse>('/contracts/search', {
+    contract_id: contractId,
+  });
+  return response.data;
+};
+
+/**
+ * Search for a contract template by either account number or template ID
+ *
+ * @param searchTerm - Either account number (12 digits) or template ID
+ * @returns Promise with contract template search results
+ */
+export const searchContract = async (
+  searchTerm: string
+): Promise<SearchContractResponse> => {
+  // Auto-detect search type: if it's all digits and 12 chars, assume account number
+  const isAccountNumber = /^\d{12}$/.test(searchTerm.replace(/\D/g, ''));
+
+  if (isAccountNumber) {
+    return searchContractByAccount(searchTerm);
+  } else {
+    return searchContractById(searchTerm);
+  }
+};
+
+/**
+ * Get contract template details by template ID
+ *
+ * @param contractId - The contract template ID
+ * @returns Promise with full template details including extracted data
  */
 export const getContract = async (contractId: string): Promise<Contract> => {
   const response = await apiClient.get<Contract>(`/contracts/${contractId}`);
@@ -118,8 +176,9 @@ export const getContract = async (contractId: string): Promise<Contract> => {
 };
 
 /**
- * Get contract PDF URL (backend proxy endpoint)
- * @param contractId - The contract ID
+ * Get contract template PDF URL (backend proxy endpoint)
+ *
+ * @param contractId - The contract template ID
  * @returns Promise with PDF endpoint URL
  */
 export const getContractPdfUrl = async (contractId: string): Promise<string> => {

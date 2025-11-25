@@ -12,6 +12,12 @@ from decimal import Decimal
 from uuid import UUID
 
 
+def to_camel(string: str) -> str:
+    """Convert snake_case to camelCase."""
+    components = string.split("_")
+    return components[0] + "".join(x.title() for x in components[1:])
+
+
 class ContractResponse(BaseModel):
     """
     Response schema for contract template data.
@@ -56,22 +62,24 @@ class ContractResponse(BaseModel):
 
     model_config = ConfigDict(
         from_attributes=True,  # Allow creating from ORM models
+        populate_by_name=True,  # Allow population by field name or alias
+        alias_generator=to_camel,  # Convert to camelCase for JSON
         json_schema_extra={
             "examples": [
                 {
-                    "contract_id": "GAP-2024-TEMPLATE-001",
-                    "s3_bucket": "contract-templates-dev",
-                    "s3_key": "templates/GAP-2024-TEMPLATE-001.pdf",
-                    "text_extraction_status": "completed",
-                    "text_extracted_at": "2025-11-15T10:00:00Z",
-                    "contract_type": "GAP",
-                    "contract_date": "2024-01-15",
-                    "template_version": "1.0",
-                    "effective_date": "2024-01-15",
-                    "deprecated_date": None,
-                    "is_active": True,
-                    "created_at": "2025-11-11T10:00:00Z",
-                    "updated_at": "2025-11-11T10:00:00Z",
+                    "contractId": "GAP-2024-TEMPLATE-001",
+                    "s3Bucket": "contract-templates-dev",
+                    "s3Key": "templates/GAP-2024-TEMPLATE-001.pdf",
+                    "textExtractionStatus": "completed",
+                    "textExtractedAt": "2025-11-15T10:00:00Z",
+                    "contractType": "GAP",
+                    "contractDate": "2024-01-15",
+                    "templateVersion": "1.0",
+                    "effectiveDate": "2024-01-15",
+                    "deprecatedDate": None,
+                    "isActive": True,
+                    "createdAt": "2025-11-11T10:00:00Z",
+                    "updatedAt": "2025-11-11T10:00:00Z",
                 }
             ]
         },

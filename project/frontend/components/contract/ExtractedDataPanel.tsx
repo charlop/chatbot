@@ -79,14 +79,14 @@ export const ExtractedDataPanel = ({
         )}
       </div>
 
-      {/* Account Info Card */}
+      {/* Template Info Card */}
       <div className="grid grid-cols-2 gap-4 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg mb-6">
         <div>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 uppercase mb-1">
-            Account Number
+            Template ID
           </p>
-          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            {contract.accountNumber}
+          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 font-mono">
+            {contract.contractId}
           </p>
         </div>
         <div>
@@ -94,7 +94,7 @@ export const ExtractedDataPanel = ({
             Contract Type
           </p>
           <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-            {contract.contract_type || 'N/A'}
+            {contract.contractType || 'N/A'}
           </p>
         </div>
         <div>
@@ -103,14 +103,6 @@ export const ExtractedDataPanel = ({
           </p>
           <p className="text-xs font-mono text-neutral-900 dark:text-neutral-100">
             {contract.id}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 uppercase mb-1">
-            Customer
-          </p>
-          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-            {contract.customer_name || 'N/A'}
           </p>
         </div>
       </div>

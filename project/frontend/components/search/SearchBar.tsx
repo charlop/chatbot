@@ -8,7 +8,7 @@ import { ApiError } from '@/lib/api/client';
 import { addRecentSearch } from '@/lib/utils/recentSearches';
 
 export interface SearchBarProps {
-  onSearch?: (accountNumber: string) => void;
+  onSearch?: (searchTerm: string) => void;
   onSuccess?: (result: SearchContractResponse) => void;
   onError?: (error: string) => void;
   placeholder?: string;
@@ -18,16 +18,28 @@ export interface SearchBarProps {
 }
 
 /**
- * Format account number with dashes
+ * Format account number with dashes (for display only)
  * Format: XXX-XXXX-XXXXX (12 digits total)
  * Examples:
  *   000000000001 -> 000-0000-00001
  *   123456789012 -> 123-4567-89012
  *   123456 -> 123-456 (partial input)
+ *
+ * Note: Template IDs are not formatted (e.g., GAP-2024-TEMPLATE-001)
  */
 const formatAccountNumber = (value: string): string => {
   // Remove all non-digit characters
   const cleaned = value.replace(/\D/g, '');
+
+  // Only format if it looks like an account number (all digits)
+  if (cleaned.length === 0) {
+    return value; // Return as-is if no digits (could be template ID)
+  }
+
+  // If value has non-digits and isn't just digits, assume it's a template ID
+  if (value !== cleaned && cleaned.length < value.length) {
+    return value; // Don't format template IDs
+  }
 
   // Add dashes at appropriate positions (3-4-5 pattern)
   if (cleaned.length <= 3) {
@@ -43,7 +55,7 @@ export const SearchBar = ({
   onSearch,
   onSuccess,
   onError,
-  placeholder = 'Enter account number',
+  placeholder = 'Enter account number or template ID',
   autoFocus = false,
   value: controlledValue,
   onChange: controlledOnChange,
@@ -52,7 +64,7 @@ export const SearchBar = ({
 
   // Use controlled value if provided, otherwise use internal state
   const isControlled = controlledValue !== undefined;
-  const accountNumber = isControlled ? controlledValue : internalValue;
+  const searchTerm = isControlled ? controlledValue : internalValue;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -85,11 +97,11 @@ export const SearchBar = ({
       e.preventDefault();
     }
 
-    const trimmed = accountNumber.trim();
+    const trimmed = searchTerm.trim();
 
     // Validate input
     if (!trimmed) {
-      setError('Account number is required');
+      setError('Account number or template ID is required');
       return;
     }
 
@@ -103,11 +115,16 @@ export const SearchBar = ({
     }
 
     try {
-      // Call API
+      // Call API (auto-detects account number vs template ID)
       const response = await searchContract(trimmed);
 
-      // Save to recent searches
-      addRecentSearch(trimmed);
+      // Determine search type for recent searches
+      const cleanedSearchTerm = trimmed.replace(/\D/g, '');
+      const isAccountNumber = /^\d{12}$/.test(cleanedSearchTerm);
+      const searchType = isAccountNumber ? 'account' : 'template';
+
+      // Save to recent searches with template ID
+      addRecentSearch(trimmed, searchType, response.contractId);
 
       // Success callback with full response
       if (onSuccess) {
@@ -132,7 +149,7 @@ export const SearchBar = ({
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (accountNumber.trim()) {
+      if (searchTerm.trim()) {
         handleSubmit();
       }
     }
@@ -143,20 +160,24 @@ export const SearchBar = ({
       <div className="flex gap-2">
         <div className="flex-1 relative">
           <Input
-            label="Account Number"
-            value={accountNumber}
+            label="Search"
+            value={searchTerm}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             placeholder={placeholder}
-            helperText={!error ? 'Format: XXX-XXXX-XXXXX (12 digits)' : undefined}
+            helperText={
+              !error
+                ? 'Account: 12 digits (XXX-XXXX-XXXXX) or Template ID (e.g., GAP-2024-TEMPLATE-001)'
+                : undefined
+            }
             error={error}
             disabled={isLoading}
             autoFocus={autoFocus}
             fullWidth
-            aria-label="Account Number"
+            aria-label="Search for contract template"
           />
 
-          {accountNumber && (
+          {searchTerm && (
             <button
               type="button"
               onClick={handleClear}

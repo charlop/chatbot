@@ -8,64 +8,80 @@ from decimal import Decimal
 from typing import Optional
 from uuid import uuid4
 
-from app.models.database import Contract, Extraction, User, AuditEvent
+from app.models.database import Contract, Extraction, User, AuditEvent, AccountTemplateMapping
 
 
 class ContractFactory:
-    """Factory for creating Contract test instances."""
+    """Factory for creating Contract TEMPLATE test instances."""
 
     @staticmethod
     def build(
-        contract_id: str = "GAP-2024-TEST",
-        account_number: str = "000000000001",
-        customer_name: str = "Test Customer",
+        contract_id: str = "GAP-2024-TEMPLATE-001",
         contract_type: str = "GAP",
+        template_version: str = "1.0",
+        is_active: bool = True,
         **kwargs,
     ) -> Contract:
         """
-        Build a Contract instance with default test data.
+        Build a Contract TEMPLATE instance with default test data.
+
+        Note: This creates templates (not customer contracts).
+        For account-template mappings, use AccountMappingFactory.
 
         Args:
-            contract_id: Contract ID
-            account_number: Account number
-            customer_name: Customer name
+            contract_id: Template ID (e.g., GAP-2024-TEMPLATE-001)
             contract_type: Contract type (GAP or VSC)
-            **kwargs: Additional contract fields
+            template_version: Template version (e.g., "1.0")
+            is_active: Whether template is active
+            **kwargs: Additional template fields
 
         Returns:
-            Contract instance (not persisted)
+            Contract template instance (not persisted)
         """
         defaults = {
             "contract_id": contract_id,
-            "account_number": account_number,
             "s3_bucket": "test-contracts",
-            "s3_key": f"contracts/{contract_id}.pdf",
+            "s3_key": f"templates/{contract_id}.pdf",
             "document_repository_id": f"DOC-{contract_id}",
             "contract_type": contract_type,
             "contract_date": date.today() - timedelta(days=30),
-            "customer_name": customer_name,
-            "vehicle_info": {
-                "make": "Toyota",
-                "model": "Camry",
-                "year": 2023,
-                "vin": "1HGCM82633A004352",
-                "color": "Silver",
-            },
+            "template_version": template_version,
+            "effective_date": date.today() - timedelta(days=30),
+            "is_active": is_active,
+            "document_text": f"""
+{contract_type} INSURANCE AGREEMENT TEMPLATE
+Template ID: {contract_id}
+Version: {template_version}
+
+[CUSTOMER NAME]
+[CUSTOMER ADDRESS]
+
+VEHICLE INFORMATION:
+[YEAR] [MAKE] [MODEL]
+VIN: [VIN NUMBER]
+
+COVERAGE DETAILS:
+{contract_type} Insurance Premium: [PREMIUM]
+Refund Calculation Method: [METHOD]
+Cancellation Fee: [FEE]
+            """.strip(),
+            "text_extraction_status": "completed",
+            "text_extracted_at": datetime.utcnow(),
         }
         defaults.update(kwargs)
         return Contract(**defaults)
 
     @staticmethod
-    def build_with_extraction(contract_id: str = "GAP-2024-WITH-EXT", **kwargs) -> Contract:
+    def build_with_extraction(contract_id: str = "GAP-2024-TEMPLATE-001", **kwargs) -> Contract:
         """
-        Build a Contract instance with an associated Extraction.
+        Build a Contract template instance with an associated Extraction.
 
         Args:
-            contract_id: Contract ID
-            **kwargs: Additional contract fields
+            contract_id: Template ID
+            **kwargs: Additional template fields
 
         Returns:
-            Contract instance with extraction relationship
+            Contract template instance with extraction relationship
         """
         contract = ContractFactory.build(contract_id=contract_id, **kwargs)
 
@@ -76,12 +92,43 @@ class ContractFactory:
         return contract
 
 
+class AccountMappingFactory:
+    """Factory for creating AccountTemplateMapping test instances."""
+
+    @staticmethod
+    def build(
+        account_number: str = "000000000001",
+        contract_template_id: str = "GAP-2024-TEMPLATE-001",
+        source: str = "migrated",
+        **kwargs,
+    ) -> AccountTemplateMapping:
+        """
+        Build an AccountTemplateMapping instance with default test data.
+
+        Args:
+            account_number: 12-digit account number
+            contract_template_id: Template ID this account maps to
+            source: Mapping source (external_api, manual, migrated)
+            **kwargs: Additional mapping fields
+
+        Returns:
+            AccountTemplateMapping instance (not persisted)
+        """
+        defaults = {
+            "account_number": account_number,
+            "contract_template_id": contract_template_id,
+            "source": source,
+        }
+        defaults.update(kwargs)
+        return AccountTemplateMapping(**defaults)
+
+
 class ExtractionFactory:
     """Factory for creating Extraction test instances."""
 
     @staticmethod
     def build(
-        contract_id: str = "GAP-2024-TEST",
+        contract_id: str = "GAP-2024-TEMPLATE-001",
         status: str = "pending",
         gap_insurance_premium: Optional[Decimal] = Decimal("500.00"),
         refund_calculation_method: Optional[str] = "Pro-rata",
@@ -166,8 +213,8 @@ class AuditEventFactory:
 
     @staticmethod
     def build(
-        contract_id: str = "GAP-2024-TEST",
-        action: str = "contract_view",
+        contract_id: str = "GAP-2024-TEMPLATE-001",
+        event_type: str = "template_view",
         event_data: Optional[dict] = None,
         **kwargs,
     ) -> AuditEvent:
@@ -175,8 +222,8 @@ class AuditEventFactory:
         Build an AuditEvent instance with default test data.
 
         Args:
-            contract_id: Associated contract ID
-            action: Action performed
+            contract_id: Associated template ID
+            event_type: Event type (account_lookup, template_view, etc.)
             event_data: Additional event data
             **kwargs: Additional audit event fields
 
@@ -189,7 +236,7 @@ class AuditEventFactory:
         defaults = {
             "contract_id": contract_id,
             "user_id": None,  # No auth yet
-            "action": action,
+            "event_type": event_type,
             "event_data": event_data,
         }
         defaults.update(kwargs)

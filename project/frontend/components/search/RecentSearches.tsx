@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import {
   getRecentSearches,
   clearRecentSearches,
+  RecentSearch,
+  formatRecentSearch,
 } from '@/lib/utils/recentSearches';
 
 const DEFAULT_MAX_ITEMS = 5;
 
 export interface RecentSearchesProps {
-  onSelect?: (accountNumber: string) => void;
+  onSelect?: (searchTerm: string) => void;
   onClear?: () => void;
   maxItems?: number;
   className?: string;
@@ -21,7 +23,7 @@ export const RecentSearches = ({
   maxItems = DEFAULT_MAX_ITEMS,
   className = '',
 }: RecentSearchesProps) => {
-  const [searches, setSearches] = useState<string[]>([]);
+  const [searches, setSearches] = useState<RecentSearch[]>([]);
 
   // Load searches from localStorage on mount
   useEffect(() => {
@@ -30,9 +32,9 @@ export const RecentSearches = ({
   }, []);
 
   // Handle search selection
-  const handleSelect = (accountNumber: string) => {
+  const handleSelect = (searchTerm: string) => {
     if (onSelect) {
-      onSelect(accountNumber);
+      onSelect(searchTerm);
     }
   };
 
@@ -74,13 +76,13 @@ export const RecentSearches = ({
         {/* Display in reverse order (newest first) */}
         {[...displaySearches].reverse().map((search, index) => (
           <button
-            key={`${search}-${index}`}
+            key={`${search.searchTerm}-${search.timestamp}-${index}`}
             type="button"
-            onClick={() => handleSelect(search)}
+            onClick={() => handleSelect(search.searchTerm)}
             className="w-full text-left px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded border border-neutral-200 dark:border-neutral-700 transition-colors"
-            aria-label={`Search for ${search}`}
+            aria-label={`Search for ${search.searchTerm}`}
           >
-            {search}
+            {formatRecentSearch(search)}
           </button>
         ))}
       </div>

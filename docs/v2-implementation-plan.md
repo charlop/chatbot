@@ -465,46 +465,51 @@ ENABLE_HYBRID_CACHE=true
 
 ## Implementation Order
 
-**Phase 1: Database Schema (Days 1-2)**
+**Phase 1: Database Schema Changes (Days 1-2)**
 1. Update schema.sql with account_template_mappings table
 2. Remove customer-specific fields from contracts table
 3. Add template versioning fields
 4. Update audit_events constraints
 5. Test schema on local PostgreSQL
 
-**Phase 2: Backend Core (Days 3-5)**
+**Phase 2: Backend API Implementation (Days 3-7)**
 6. Implement External RDB client (`/app/integrations/external_rdb/`)
 7. Create AccountMapping model and repository
 8. Update Contract model (remove customer fields)
 9. Update contract service with hybrid cache logic
-10. Write unit tests for new components
+10. Update API endpoints and schemas
+11. Add error handling and circuit breakers
+12. Write unit tests for new components
+13. Write integration tests
+14. Test external API mocking
 
-**Phase 3: API Integration (Days 6-7)**
-11. Update API endpoints and schemas
-12. Add error handling and circuit breakers
-13. Update seed_db.py with template data
-14. Write integration tests
-15. Test external API mocking
+**Phase 3: Frontend Updates (Days 8-9)**
+15. Update TypeScript types in `/lib/api/contracts.ts`
+16. Update UI terminology in components
+17. Update recent searches to track search type
+18. Write/update frontend tests
 
-**Phase 4: Frontend Updates (Days 8-9)**
-16. Update TypeScript types in `/lib/api/contracts.ts`
-17. Update UI terminology in components
-18. Update recent searches to track search type
-19. Write/update frontend tests
+**Phase 4: Testing & Data (Day 10)**
+19. Update seed_db.py with template data
+20. Create mock External RDB for tests
+21. Update existing tests with template data
+22. Test complete search flow (account → external API → template → display)
+23. Test cache hit scenarios
+24. Test external API failure scenarios
+25. Performance testing
 
-**Phase 5: End-to-End Testing (Day 10)**
-20. Test complete search flow (account → external API → template → display)
-21. Test cache hit scenarios
-22. Test external API failure scenarios
-23. Performance testing
+**Phase 5: Fresh Start Strategy (Day 11)**
+26. Archive existing database (optional)
+27. Reset database on dev/staging
+28. Seed with template data
 
-**Phase 6: Deployment (Days 11-12)**
-24. Reset database on dev/staging
-25. Deploy backend with feature flags
-26. Deploy frontend
-27. Integration testing on staging
-28. Production deployment
-29. Monitoring and verification
+**Phase 6: Configuration & Deployment (Days 11-12)**
+29. Configure environment variables
+30. Deploy backend with feature flags
+31. Deploy frontend
+32. Integration testing on staging
+33. Production deployment
+34. Monitoring and verification
 
 **Timeline**: ~2-3 weeks with 1-2 developers
 

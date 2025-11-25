@@ -49,19 +49,19 @@ export const SearchResults = ({
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-            Contract Found
+            Contract Template Found
           </h3>
           <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-            We found a contract matching your search criteria.
+            We found a contract template matching your search criteria.
           </p>
         </div>
       </div>
 
-      {/* Contract Details */}
+      {/* Contract Template Details */}
       <div className="space-y-4 mb-6">
         <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
           <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            Contract ID
+            Template ID
           </span>
           <span className="text-sm font-mono text-neutral-900 dark:text-neutral-100">
             {result.contractId}
@@ -69,15 +69,6 @@ export const SearchResults = ({
         </div>
 
         <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
-          <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            Account Number
-          </span>
-          <span className="text-sm font-mono text-neutral-900 dark:text-neutral-100">
-            {result.accountNumber}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between py-3">
           <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
             Contract Type
           </span>
@@ -90,21 +81,32 @@ export const SearchResults = ({
           </span>
         </div>
 
-        {result.customerName && (
-          <div className="flex items-center justify-between py-3 border-t border-neutral-200 dark:border-neutral-700">
+        {result.templateVersion && (
+          <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
             <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-              Customer Name
+              Template Version
             </span>
             <span className="text-sm text-neutral-900 dark:text-neutral-100">
-              {result.customerName}
+              {result.templateVersion}
+            </span>
+          </div>
+        )}
+
+        {result.effectiveDate && (
+          <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
+            <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+              Effective Date
+            </span>
+            <span className="text-sm text-neutral-900 dark:text-neutral-100">
+              {new Date(result.effectiveDate).toLocaleDateString()}
             </span>
           </div>
         )}
 
         {result.contractDate && (
-          <div className="flex items-center justify-between py-3 border-t border-neutral-200 dark:border-neutral-700">
+          <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
             <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-              Contract Date
+              Created Date
             </span>
             <span className="text-sm text-neutral-900 dark:text-neutral-100">
               {new Date(result.contractDate).toLocaleDateString()}
@@ -130,8 +132,8 @@ export const SearchResults = ({
       {/* Info Note */}
       <div className="mt-4 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-md">
         <p className="text-xs text-primary-700 dark:text-primary-300">
-          <strong>Note:</strong> Full contract details including AI-extracted data will
-          be available in the contract view page (coming in Day 7).
+          <strong>Note:</strong> Full contract template details including AI-extracted data are
+          available in the contract details view.
         </p>
       </div>
     </div>

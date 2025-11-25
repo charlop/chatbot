@@ -198,7 +198,7 @@ export default function ContractDetailsPage() {
     : null;
 
   return (
-    <Layout title={`Contract ${contract.accountNumber}`}>
+    <Layout title={`Contract Template ${contract.contractId}`}>
       {/* Back Button */}
       <div className="mb-4">
         <button
@@ -223,7 +223,7 @@ export default function ContractDetailsPage() {
         <div className="lg:col-span-2 h-full">
           <PDFViewer
             contractId={contract.contractId}
-            fileName={`${contract.accountNumber}.pdf`}
+            fileName={`${contract.contractId}.pdf`}
             pageNumber={currentPdfPage}
           />
         </div>
@@ -245,49 +245,34 @@ export default function ContractDetailsPage() {
                   Contract Details
                 </h3>
 
-                {/* Customer Information */}
+                {/* Template Version Information */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                    Customer Information
+                    Template Version
                   </h4>
                   <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-lg p-3 space-y-1">
                     <div className="text-sm">
-                      <span className="text-neutral-500 dark:text-neutral-400">Name:</span>{' '}
+                      <span className="text-neutral-500 dark:text-neutral-400">Version:</span>{' '}
                       <span className="text-neutral-900 dark:text-neutral-100 font-medium">
-                        {contract.customerName}
+                        {contract.templateVersion || 'N/A'}
                       </span>
                     </div>
+                    {contract.effectiveDate && (
+                      <div className="text-sm">
+                        <span className="text-neutral-500 dark:text-neutral-400">Effective Date:</span>{' '}
+                        <span className="text-neutral-900 dark:text-neutral-100">
+                          {new Date(contract.effectiveDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
                     <div className="text-sm">
-                      <span className="text-neutral-500 dark:text-neutral-400">Account:</span>{' '}
-                      <span className="text-neutral-900 dark:text-neutral-100 font-mono">
-                        {contract.accountNumber}
+                      <span className="text-neutral-500 dark:text-neutral-400">Status:</span>{' '}
+                      <span className={`font-medium ${contract.isActive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {contract.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </div>
                 </div>
-
-                {/* Vehicle Information */}
-                {contract.vehicleInfo && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                      Vehicle Information
-                    </h4>
-                    <div className="bg-neutral-50 dark:bg-neutral-900/50 rounded-lg p-3 space-y-1">
-                      <div className="text-sm">
-                        <span className="text-neutral-500 dark:text-neutral-400">Make/Model:</span>{' '}
-                        <span className="text-neutral-900 dark:text-neutral-100 font-medium">
-                          {contract.vehicleInfo.year} {contract.vehicleInfo.make} {contract.vehicleInfo.model}
-                        </span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-neutral-500 dark:text-neutral-400">VIN:</span>{' '}
-                        <span className="text-neutral-900 dark:text-neutral-100 font-mono">
-                          {contract.vehicleInfo.vin}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Contract Metadata */}
                 <div className="space-y-2">
@@ -364,7 +349,6 @@ export default function ContractDetailsPage() {
           messages={messages}
           onSendMessage={sendChatMessage}
           contractId={contract.contractId}
-          accountNumber={contract.accountNumber}
           isLoading={isChatLoading}
           error={chatError?.message}
           defaultExpanded={false}

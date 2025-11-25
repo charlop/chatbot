@@ -83,8 +83,9 @@ class AuditEvent(Base):
     __table_args__ = (
         CheckConstraint(
             """event_type IN (
-                'search', 'view', 'extract', 'submit', 'chat',
-                'login', 'logout', 'user_created', 'user_updated', 'user_deleted'
+                'search', 'view', 'extract', 'edit', 'approve', 'reject', 'chat',
+                'login', 'logout', 'user_created', 'user_updated', 'user_deleted',
+                'account_lookup', 'template_view', 'mapping_cached'
             )""",
             name="check_audit_event_type",
         ),
