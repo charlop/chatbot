@@ -8,6 +8,7 @@ from app.models.database.contract import Contract
 from app.models.database.extraction import Extraction
 from app.models.database.correction import Correction
 from app.models.database.audit_event import AuditEvent
+from app.models.database.account_mapping import AccountTemplateMapping
 
 __all__ = [
     "User",
@@ -15,4 +16,5 @@ __all__ = [
     "Extraction",
     "Correction",
     "AuditEvent",
+    "AccountTemplateMapping",
 ]

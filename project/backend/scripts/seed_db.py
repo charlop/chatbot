@@ -18,7 +18,14 @@ from uuid import UUID
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.database import get_async_engine, get_session_local, init_database
-from app.models.database import User, Contract, Extraction, AuditEvent, Correction
+from app.models.database import (
+    User,
+    Contract,
+    Extraction,
+    AuditEvent,
+    Correction,
+    AccountTemplateMapping,
+)
 from app.config import settings
 
 
@@ -80,146 +87,134 @@ async def seed_users(session):
 
 
 async def seed_contracts(session):
-    """Seed test contracts."""
-    print("Seeding contracts...")
+    """Seed contract TEMPLATES (not customer contracts)."""
+    print("Seeding contract templates...")
 
-    # Sample contract data
-    makes_models = [
-        ("Toyota", "Camry"),
-        ("Honda", "Accord"),
-        ("Ford", "F-150"),
-        ("Chevrolet", "Silverado"),
-        ("Tesla", "Model 3"),
-        ("BMW", "3 Series"),
-        ("Mercedes-Benz", "C-Class"),
-        ("Audi", "A4"),
-        ("Nissan", "Altima"),
-        ("Hyundai", "Elantra"),
-        ("Mazda", "CX-5"),
-        ("Subaru", "Outback"),
-        ("Volkswagen", "Jetta"),
-        ("Kia", "Sportage"),
-        ("Jeep", "Wrangler"),
+    # Sample extraction values for templates
+    template_data = [
+        ("GAP", 500.00, "Pro-rata", 50.00, "1.0"),
+        ("GAP", 750.00, "Flat-rate", 75.00, "1.0"),
+        ("GAP", 625.00, "Short-rate", 60.00, "1.1"),
+        ("VSC", 550.00, "Pro-rata", 55.00, "1.0"),
+        ("VSC", 800.00, "Flat-rate", 80.00, "1.0"),
+        ("GAP", 675.00, "Pro-rata", 65.00, "2.0"),
+        ("VSC", 700.00, "Short-rate", 70.00, "1.1"),
     ]
 
-    # Sample extraction values for document text
-    premiums = [
-        500.00,
-        750.00,
-        625.00,
-        550.00,
-        800.00,
-        675.00,
-        700.00,
-        525.00,
-        775.00,
-        600.00,
-        650.00,
-        725.00,
-        575.00,
-        825.00,
-        625.00,
-    ]
-    methods = [
-        "Pro-rata",
-        "Flat-rate",
-        "Short-rate",
-        "Pro-rata",
-        "Flat-rate",
-        "Short-rate",
-        "Pro-rata",
-        "Flat-rate",
-        "Short-rate",
-        "Pro-rata",
-        "Flat-rate",
-        "Short-rate",
-        "Pro-rata",
-        "Flat-rate",
-        "Short-rate",
-    ]
-    fees = [
-        50.00,
-        75.00,
-        60.00,
-        55.00,
-        80.00,
-        65.00,
-        70.00,
-        52.50,
-        77.50,
-        60.00,
-        65.00,
-        72.50,
-        57.50,
-        82.50,
-        62.50,
-    ]
-
-    contracts = []
-    for i in range(15):
-        make, model = makes_models[i]
-        year = 2020 + (i % 5)  # 2020-2024
-
-        # 12-digit account number (with leading zeros)
-        account_number = f"{i+1:012d}"  # e.g., 000000000001, 000000000002, etc.
-
-        contract = Contract(
-            contract_id=f"GAP-2024-{i+1:04d}",
-            account_number=account_number,
+    templates = []
+    for i, (contract_type, premium, method, fee, version) in enumerate(template_data):
+        template = Contract(
+            contract_id=f"{contract_type}-2024-TEMPLATE-{i+1:03d}",
             s3_bucket="test-contract-documents",
-            s3_key=f"contracts/2024/{account_number}/GAP-2024-{i+1:04d}.pdf",
-            document_repository_id=f"DOC-REPO-{i+1:06d}",
-            contract_type="GAP" if i % 3 != 2 else "VSC",  # Mix of GAP and VSC
-            contract_date=date.today() - timedelta(days=i * 30),
-            customer_name=f"Test Customer {i+1}",
-            vehicle_info={
-                "make": make,
-                "model": model,
-                "year": year,
-                "vin": f"1HGCM82633A{i+1:06d}",
-                "color": ["Black", "White", "Silver", "Blue", "Red"][i % 5],
-            },
-            # Add sample document text for extraction testing
+            s3_key=f"templates/{contract_type}-2024-TEMPLATE-{i+1:03d}.pdf",
+            document_repository_id=f"DOC-REPO-TEMPLATE-{i+1:06d}",
+            contract_type=contract_type,
+            contract_date=date.today() - timedelta(days=i * 60),
+            template_version=version,
+            effective_date=date.today() - timedelta(days=i * 60),
+            is_active=True,
+            # Template text with placeholders (no customer/vehicle data)
             document_text=f"""
-GAP INSURANCE AGREEMENT
-Contract ID: GAP-2024-{i+1:04d}
-Account Number: {account_number}
-Customer: Test Customer {i+1}
+{contract_type} INSURANCE AGREEMENT TEMPLATE
+Template ID: {contract_type}-2024-TEMPLATE-{i+1:03d}
+Version: {version}
+
+[CUSTOMER NAME]
+[CUSTOMER ADDRESS]
 
 VEHICLE INFORMATION:
-{year} {make} {model}
-VIN: 1HGCM82633A{i+1:06d}
+[YEAR] [MAKE] [MODEL]
+VIN: [VIN NUMBER]
 
 COVERAGE DETAILS:
-GAP Insurance Premium: ${premiums[i]:.2f}
-Refund Calculation Method: {methods[i]}
-Cancellation Fee: ${fees[i]:.2f}
+{contract_type} Insurance Premium: ${premium:.2f}
+Refund Calculation Method: {method}
+Cancellation Fee: ${fee:.2f}
 
-This agreement provides Guaranteed Asset Protection (GAP) coverage for the above vehicle.
+This agreement provides {"Guaranteed Asset Protection (GAP)" if contract_type == "GAP" else "Vehicle Service Contract (VSC)"} coverage for the above vehicle.
 The premium amount includes all applicable fees and charges.
 
 REFUND POLICY:
-Refunds will be calculated using the {methods[i]} method.
-A cancellation fee of ${fees[i]:.2f} will apply to all cancellations.
+Refunds will be calculated using the {method} method as outlined below:
+- Pro-rata: Refund based on unused portion of coverage period
+- Flat-rate: Fixed refund amount regardless of usage
+- Short-rate: Pro-rata refund minus administrative fee
 
-Contract Date: {(date.today() - timedelta(days=i * 30)).isoformat()}
+A cancellation fee of ${fee:.2f} will apply to all cancellations.
+This fee covers administrative costs associated with contract termination.
+
+TERMS AND CONDITIONS:
+[Standard terms and conditions apply per state regulations]
+
+Effective Date: {(date.today() - timedelta(days=i * 60)).isoformat()}
             """.strip(),
             text_extraction_status="completed",
             text_extracted_at=datetime.utcnow(),
         )
-        contracts.append(contract)
+        templates.append(template)
 
-    # Add contracts (idempotent - check if exists first)
-    for contract in contracts:
-        existing = await session.get(Contract, contract.contract_id)
+    # Add templates (idempotent - check if exists first)
+    for template in templates:
+        existing = await session.get(Contract, template.contract_id)
         if not existing:
-            session.add(contract)
-            print(f"  Created contract: {contract.contract_id} ({contract.customer_name})")
+            session.add(template)
+            print(f"  Created template: {template.contract_id} (v{template.template_version})")
         else:
-            print(f"  Contract already exists: {contract.contract_id}")
+            print(f"  Template already exists: {template.contract_id}")
 
     await session.commit()
-    print(f"✅ Contracts seeded")
+    print(f"✅ Contract templates seeded ({len(templates)} templates)")
+
+
+async def seed_account_mappings(session):
+    """Seed account number to template ID mappings."""
+    print("Seeding account-template mappings...")
+
+    # Get all templates
+    from sqlalchemy import select
+
+    result = await session.execute(select(Contract))
+    templates = result.scalars().all()
+
+    if not templates:
+        print("  ⚠️ No templates found, skipping mapping seeding")
+        return
+
+    # Create 100 account mappings pointing to our templates
+    # This simulates many customers using the same templates
+    mappings = []
+    for i in range(100):
+        # 12-digit account number (with leading zeros)
+        account_number = f"{i+1:012d}"
+
+        # Round-robin assign templates (many accounts per template)
+        template = templates[i % len(templates)]
+
+        mapping = AccountTemplateMapping(
+            account_number=account_number,
+            contract_template_id=template.contract_id,
+            source="migrated",  # Simulating pre-populated data
+        )
+        mappings.append(mapping)
+
+    # Add mappings (idempotent - check if exists first)
+    added = 0
+    for mapping in mappings:
+        existing_result = await session.execute(
+            select(AccountTemplateMapping).where(
+                AccountTemplateMapping.account_number == mapping.account_number
+            )
+        )
+        existing = existing_result.scalar_one_or_none()
+
+        if not existing:
+            session.add(mapping)
+            added += 1
+        else:
+            pass  # Silently skip existing
+
+    await session.commit()
+    print(f"✅ Account mappings seeded ({added} new mappings, {len(mappings) - added} existing)")
 
 
 async def seed_extractions(session):
@@ -310,30 +305,38 @@ async def seed_audit_events(session):
         print("  ⚠️ No users found, skipping audit event seeding")
         return
 
-    # Get first contract
+    # Get first template
     result = await session.execute(select(Contract).limit(1))
-    contract = result.scalar_one_or_none()
+    template = result.scalar_one_or_none()
 
-    if not contract:
-        print("  ⚠️ No contracts found, skipping audit event seeding")
+    if not template:
+        print("  ⚠️ No templates found, skipping audit event seeding")
         return
+
+    # Get first account mapping for search event
+    result = await session.execute(select(AccountTemplateMapping).limit(1))
+    mapping = result.scalar_one_or_none()
 
     # Sample audit events
     events = [
         AuditEvent(
-            event_type="search",
-            contract_id=None,
+            event_type="account_lookup",
+            contract_id=template.contract_id if mapping else None,
             user_id=user.user_id,
-            event_data={"query": contract.account_number, "results_count": 1},
+            event_data={
+                "account_number": mapping.account_number if mapping else "000000000001",
+                "template_id": template.contract_id,
+                "source": "search",
+            },
             ip_address="127.0.0.1",
             user_agent="Mozilla/5.0 (Test Browser)",
             duration_ms=150,
         ),
         AuditEvent(
-            event_type="view",
-            contract_id=contract.contract_id,
+            event_type="template_view",
+            contract_id=template.contract_id,
             user_id=user.user_id,
-            event_data={"source": "search_results"},
+            event_data={"source": "search_results", "template_version": template.template_version},
             ip_address="127.0.0.1",
             user_agent="Mozilla/5.0 (Test Browser)",
             duration_ms=300,
@@ -424,8 +427,12 @@ async def main():
             await seed_users(session)
             print()
 
-            # Seed contracts
+            # Seed contract templates
             await seed_contracts(session)
+            print()
+
+            # Seed account-template mappings
+            await seed_account_mappings(session)
             print()
 
             # Optionally seed extractions

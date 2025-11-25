@@ -430,7 +430,7 @@ def upload_test_pdfs():
         )
 
         # Upload to S3
-        s3_key = f"contracts/2024/{contract_id}.pdf"
+        s3_key = f"contracts/{contract_id}.pdf"
 
         try:
             s3_client.put_object(
@@ -539,10 +539,10 @@ def main():
     print("✅ S3 setup complete!")
     print("=" * 60)
     print("\n💡 Verify setup:")
-    print(f"   aws --endpoint-url={S3_ENDPOINT} s3 ls s3://{S3_BUCKET}/contracts/2024/ --recursive")
+    print(f"   aws --endpoint-url={S3_ENDPOINT} s3 ls s3://{S3_BUCKET}/contracts/ --recursive")
     print("\n💡 Download a PDF:")
     print(
-        f"   aws --endpoint-url={S3_ENDPOINT} s3 cp s3://{S3_BUCKET}/contracts/2024/000000000001/GAP-2024-0001.pdf /tmp/test.pdf"
+        f"   aws --endpoint-url={S3_ENDPOINT} s3 cp s3://{S3_BUCKET}/contracts/000000000001/GAP-2024-0001.pdf /tmp/test.pdf"
     )
     print("   open /tmp/test.pdf")
     print()

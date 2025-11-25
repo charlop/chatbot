@@ -87,15 +87,15 @@ CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
 CREATE INDEX idx_sessions_is_active ON sessions(is_active);
 
 -- =============================================================================
--- CONTRACTS
+-- CONTRACTS (TEMPLATES)
 -- =============================================================================
 
--- Contracts table: Metadata for contracts (synced from external RDB)
+-- Contracts table: Contract TEMPLATES (not filled customer contracts)
 -- PDFs stored in S3 with IAM authentication (not publicly accessible)
 -- Document text and embeddings populated by external batch ETL process
+-- Account number mappings stored separately in account_template_mappings table
 CREATE TABLE contracts (
     contract_id VARCHAR(100) PRIMARY KEY,
-    account_number VARCHAR(100) NOT NULL,
 
     -- S3 Storage (PDFs stored with IAM authentication)
     s3_bucket VARCHAR(255) NOT NULL,
@@ -107,12 +107,16 @@ CREATE TABLE contracts (
     text_extracted_at TIMESTAMP WITH TIME ZONE,
     text_extraction_status VARCHAR(50), -- 'pending', 'completed', 'failed'
 
-    -- Contract Metadata
+    -- Template Metadata
     document_repository_id VARCHAR(100),
     contract_type VARCHAR(50) DEFAULT 'GAP', -- GAP, VSC, F&I, etc.
-    contract_date DATE,
-    customer_name VARCHAR(255),
-    vehicle_info JSONB, -- Flexible storage for vehicle details
+    contract_date DATE, -- When template was created
+
+    -- Template Versioning
+    template_version VARCHAR(50),
+    effective_date DATE, -- When this version became active
+    deprecated_date DATE, -- When this version was superseded
+    is_active BOOLEAN DEFAULT true,
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -124,17 +128,56 @@ CREATE TABLE contracts (
     CONSTRAINT s3_key_not_empty CHECK (s3_key <> '')
 );
 
--- Indexes for contract lookups
-CREATE INDEX idx_contracts_account_number ON contracts(account_number);
+-- Indexes for contract template lookups
 CREATE INDEX idx_contracts_contract_type ON contracts(contract_type);
 CREATE INDEX idx_contracts_last_synced_at ON contracts(last_synced_at);
 CREATE INDEX idx_contracts_contract_date ON contracts(contract_date);
 CREATE INDEX idx_contracts_s3_location ON contracts(s3_bucket, s3_key);
 CREATE INDEX idx_contracts_extraction_status ON contracts(text_extraction_status);
+CREATE INDEX idx_contracts_is_active ON contracts(is_active);
+CREATE INDEX idx_contracts_template_version ON contracts(template_version);
 
 -- Trigger to update updated_at timestamp
 CREATE TRIGGER update_contracts_updated_at
     BEFORE UPDATE ON contracts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================================
+-- ACCOUNT TEMPLATE MAPPINGS
+-- =============================================================================
+
+-- Account-Template Mappings table: Maps account numbers to contract template IDs
+-- This table caches lookups from external database for performance
+-- Supports hybrid cache strategy (Redis -> DB -> External API)
+CREATE TABLE account_template_mappings (
+    mapping_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_number VARCHAR(100) NOT NULL UNIQUE,
+    contract_template_id VARCHAR(100) NOT NULL,
+
+    -- Cache metadata
+    source VARCHAR(50) NOT NULL CHECK (source IN ('external_api', 'manual', 'migrated')),
+    cached_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_validated_at TIMESTAMP WITH TIME ZONE,
+
+    -- Foreign key to templates (allows unknown templates to be cached)
+    CONSTRAINT fk_template FOREIGN KEY (contract_template_id)
+        REFERENCES contracts(contract_id) ON DELETE CASCADE,
+
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for account-template mapping lookups
+CREATE INDEX idx_account_mappings_account_number ON account_template_mappings(account_number);
+CREATE INDEX idx_account_mappings_template_id ON account_template_mappings(contract_template_id);
+CREATE INDEX idx_account_mappings_cached_at ON account_template_mappings(cached_at);
+CREATE INDEX idx_account_mappings_source ON account_template_mappings(source);
+
+-- Trigger to update updated_at timestamp
+CREATE TRIGGER update_account_mappings_updated_at
+    BEFORE UPDATE ON account_template_mappings
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -246,12 +289,15 @@ CREATE TABLE audit_events (
         'logout',
         'user_created',
         'user_updated',
-        'user_deleted'
+        'user_deleted',
+        'account_lookup',
+        'template_view',
+        'mapping_cached'
     )),
     contract_id VARCHAR(100) REFERENCES contracts(contract_id),
     extraction_id UUID REFERENCES extractions(extraction_id),
     user_id UUID REFERENCES users(user_id),
-    event_data JSONB, -- Flexible JSON for storing event-specific data
+    event_data JSONB, -- Flexible JSON for storing event-specific data (includes account_number for searches)
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     ip_address INET,
     user_agent TEXT,
@@ -373,8 +419,9 @@ CREATE VIEW v_extraction_details AS
 SELECT
     e.extraction_id,
     e.contract_id,
-    c.account_number,
     c.contract_type,
+    c.template_version,
+    c.is_active AS template_is_active,
     e.gap_insurance_premium,
     e.gap_premium_confidence,
     e.refund_calculation_method,
@@ -506,8 +553,9 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON TABLE users IS 'User profiles with authorization roles (authentication via external provider)';
 COMMENT ON TABLE sessions IS 'Active user sessions for audit trail (auth tokens managed by external provider)';
-COMMENT ON TABLE contracts IS 'Contract metadata synced from external relational database';
-COMMENT ON TABLE extractions IS 'AI-extracted data from contracts with confidence scores';
+COMMENT ON TABLE contracts IS 'Contract templates (not filled customer contracts) - PDFs and metadata';
+COMMENT ON TABLE account_template_mappings IS 'Cache of account number to template ID mappings from external database';
+COMMENT ON TABLE extractions IS 'AI-extracted data from contract templates with confidence scores';
 COMMENT ON TABLE corrections IS 'Human corrections to AI extractions for tracking accuracy';
 COMMENT ON TABLE audit_events IS 'Immutable event log for compliance and audit trail';
 COMMENT ON TABLE system_config IS 'Application configuration settings';
@@ -516,9 +564,14 @@ COMMENT ON TABLE extraction_metrics IS 'Daily aggregated metrics for AI extracti
 
 COMMENT ON COLUMN users.auth_provider IS 'External authentication provider (auth0, okta, cognito, etc.)';
 COMMENT ON COLUMN users.auth_provider_user_id IS 'Unique user ID from external auth provider (sub claim from JWT)';
+COMMENT ON COLUMN contracts.contract_id IS 'Template identifier (e.g., GAP-2024-TEMPLATE-001)';
+COMMENT ON COLUMN contracts.template_version IS 'Version number of this template (e.g., 1.0, 2.0)';
+COMMENT ON COLUMN contracts.is_active IS 'Whether this template version is currently active';
+COMMENT ON COLUMN account_template_mappings.source IS 'Source of mapping: external_api, manual, or migrated';
+COMMENT ON COLUMN account_template_mappings.cached_at IS 'When mapping was cached from external source';
 COMMENT ON COLUMN extractions.gap_premium_confidence IS 'Confidence score 0-100 for GAP insurance premium extraction';
 COMMENT ON COLUMN extractions.llm_provider IS 'LLM provider used: openai, anthropic, or bedrock';
-COMMENT ON COLUMN audit_events.event_data IS 'Flexible JSONB field for event-specific data';
+COMMENT ON COLUMN audit_events.event_data IS 'Flexible JSONB field for event-specific data (includes account_number for searches)';
 
 -- =============================================================================
 -- GRANTS (To be customized based on user roles)
