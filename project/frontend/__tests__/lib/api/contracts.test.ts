@@ -22,9 +22,14 @@ describe('Contracts API Service', () => {
       const { searchContract } = await import('@/lib/api/contracts');
       const mockResponse: AxiosResponse = {
         data: {
-          contractId: 'C123456',
-          accountNumber: '123456789012',
-          status: 'active',
+          contractId: 'GAP-2024-TEMPLATE-001',
+          contractType: 'GAP',
+          templateVersion: '1.0',
+          isActive: true,
+          s3Bucket: 'test-bucket',
+          s3Key: 'templates/GAP-2024-TEMPLATE-001.pdf',
+          createdAt: '2025-11-01T00:00:00Z',
+          updatedAt: '2025-11-01T00:00:00Z',
         },
         status: 200,
         statusText: 'OK',
@@ -72,23 +77,23 @@ describe('Contracts API Service', () => {
   });
 
   describe('getContract', () => {
-    it('should get contract by ID', async () => {
+    it('should get contract template by ID', async () => {
       const { getContract } = await import('@/lib/api/contracts');
       const mockResponse: AxiosResponse = {
         data: {
-          id: 'C123456',
-          accountNumber: '123456789012',
-          pdfUrl: 'https://example.com/contract.pdf',
-          extracted_data: {
-            gap_premium: 1500.00,
-            refund_method: 'Pro-Rata',
-            cancellation_fee: 50.00,
+          contractId: 'GAP-2024-TEMPLATE-001',
+          contractType: 'GAP',
+          templateVersion: '1.0',
+          isActive: true,
+          s3Bucket: 'test-bucket',
+          s3Key: 'templates/GAP-2024-TEMPLATE-001.pdf',
+          extractedData: {
+            gapInsurancePremium: { value: 1500.00, confidence: 95.5 },
+            refundCalculationMethod: { value: 'Pro-Rata', confidence: 88.0 },
+            cancellationFee: { value: 50.00, confidence: 92.0 },
           },
-          audit_info: {
-            processed_by: 'user123',
-            processed_at: '2025-11-09T00:00:00Z',
-            model_version: 'gpt-4',
-          },
+          createdAt: '2025-11-01T00:00:00Z',
+          updatedAt: '2025-11-01T00:00:00Z',
         },
         status: 200,
         statusText: 'OK',
@@ -98,9 +103,9 @@ describe('Contracts API Service', () => {
 
       mockGet.mockResolvedValue(mockResponse);
 
-      const result = await getContract('C123456');
+      const result = await getContract('GAP-2024-TEMPLATE-001');
 
-      expect(mockGet).toHaveBeenCalledWith('/contracts/C123456');
+      expect(mockGet).toHaveBeenCalledWith('/contracts/GAP-2024-TEMPLATE-001');
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -134,18 +139,23 @@ describe('Contracts API Service', () => {
   });
 
   describe('Type Safety', () => {
-    it('should return properly typed contract data', async () => {
+    it('should return properly typed contract template data', async () => {
       const { getContract } = await import('@/lib/api/contracts');
       const mockResponse: AxiosResponse = {
         data: {
-          id: 'C123456',
-          accountNumber: '123456789012',
-          pdfUrl: 'https://example.com/contract.pdf',
-          extracted_data: {
-            gap_premium: 1500.00,
-            refund_method: 'Pro-Rata',
-            cancellation_fee: 50.00,
+          contractId: 'GAP-2024-TEMPLATE-001',
+          contractType: 'GAP',
+          templateVersion: '1.0',
+          isActive: true,
+          s3Bucket: 'test-bucket',
+          s3Key: 'templates/GAP-2024-TEMPLATE-001.pdf',
+          extractedData: {
+            gapInsurancePremium: { value: 1500.00, confidence: 95.5 },
+            refundCalculationMethod: { value: 'Pro-Rata', confidence: 88.0 },
+            cancellationFee: { value: 50.00, confidence: 92.0 },
           },
+          createdAt: '2025-11-01T00:00:00Z',
+          updatedAt: '2025-11-01T00:00:00Z',
         },
         status: 200,
         statusText: 'OK',
@@ -155,13 +165,14 @@ describe('Contracts API Service', () => {
 
       mockGet.mockResolvedValue(mockResponse);
 
-      const result = await getContract('C123456');
+      const result = await getContract('GAP-2024-TEMPLATE-001');
 
-      // Type assertions to verify structure
-      expect(result).toHaveProperty('id');
-      expect(result).toHaveProperty('accountNumber');
-      expect(result).toHaveProperty('pdfUrl');
-      expect(result).toHaveProperty('extracted_data');
+      // Type assertions to verify template structure
+      expect(result).toHaveProperty('contractId');
+      expect(result).toHaveProperty('contractType');
+      expect(result).toHaveProperty('templateVersion');
+      expect(result).toHaveProperty('isActive');
+      expect(result).toHaveProperty('extractedData');
     });
   });
 });

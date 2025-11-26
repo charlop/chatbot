@@ -1,7 +1,11 @@
 """
 S3 Setup Script for LocalStack.
 
-Creates S3 bucket and uploads test PDF files to match seeded contracts.
+Creates S3 bucket and uploads TEMPLATE PDF files to match seeded contract templates.
+
+✅ UPDATED: This script generates CONTRACT TEMPLATE PDFs (blank forms for printing and hand-filling).
+   Templates are stored in the database and mapped to customer accounts via account_template_mappings.
+   These PDFs represent the blank forms that customers would receive and fill out manually.
 
 Usage:
     uv run python scripts/setup_s3.py --create-bucket
@@ -12,7 +16,6 @@ Usage:
 
 import sys
 import argparse
-import asyncio
 from pathlib import Path
 from datetime import date, timedelta
 from io import BytesIO
@@ -163,21 +166,25 @@ def delete_bucket():
             return False
 
 
-def generate_gap_contract_pdf(
-    contract_id: str,
-    account_number: str,
-    customer_name: str,
-    make: str,
-    model: str,
-    year: int,
-    vin: str,
+def generate_gap_contract_template_pdf(
+    template_id: str,
     premium: float,
     method: str,
     fee: float,
-    contract_date: date,
+    template_date: date,
 ) -> bytes:
     """
-    Generate a realistic GAP Insurance Contract PDF.
+    Generate a GAP Insurance Contract TEMPLATE PDF (blank form for printing and hand-filling).
+
+    This generates a template form that customers would receive blank, print out, and fill in manually.
+    No customer-specific data is included - fields are left blank with underscores for handwriting.
+
+    Args:
+        template_id: Template identifier (e.g., GAP-2024-TEMPLATE-001)
+        premium: Standard GAP insurance premium amount for this template
+        method: Refund calculation method (Pro-rata, Flat-rate, Short-rate)
+        fee: Standard cancellation fee for this template
+        template_date: Date this template version was created
 
     Returns:
         PDF content as bytes
@@ -223,10 +230,11 @@ def generate_gap_contract_pdf(
     # Contract Information
     story.append(Paragraph("CONTRACT INFORMATION", heading_style))
     contract_info = [
-        ["Contract ID:", contract_id],
-        ["Account Number:", account_number],
-        ["Customer Name:", customer_name],
-        ["Contract Date:", contract_date.strftime("%B %d, %Y")],
+        ["Template ID:", template_id],
+        ["Template Date:", template_date.strftime("%B %d, %Y")],
+        ["Account Number:", "_" * 50],
+        ["Customer Name:", "_" * 50],
+        ["Contract Date:", "_" * 30],
     ]
     t = Table(contract_info, colWidths=[2 * inch, 4 * inch])
     t.setStyle(
@@ -248,10 +256,10 @@ def generate_gap_contract_pdf(
     # Vehicle Information
     story.append(Paragraph("VEHICLE INFORMATION", heading_style))
     vehicle_info = [
-        ["Year:", str(year)],
-        ["Make:", make],
-        ["Model:", model],
-        ["VIN:", vin],
+        ["Year:", "_" * 20],
+        ["Make:", "_" * 40],
+        ["Model:", "_" * 40],
+        ["VIN:", "_" * 40],
     ]
     t = Table(vehicle_info, colWidths=[2 * inch, 4 * inch])
     t.setStyle(
@@ -394,75 +402,65 @@ def generate_gap_contract_pdf(
 
 
 def upload_test_pdfs():
-    """Generate and upload test PDFs for all 15 contracts."""
+    """Generate and upload CONTRACT TEMPLATE PDFs for all 15 templates."""
     s3_client = get_s3_client()
 
-    print("\n📄 Generating and uploading test PDFs...")
+    print("\n📄 Generating and uploading contract template PDFs...")
     print("=" * 60)
 
     uploaded_count = 0
 
     for i in range(15):
-        make, model = MAKES_MODELS[i]
-        year = 2020 + (i % 5)
-        account_number = f"{i+1:012d}"
-        contract_id = f"GAP-2024-{i+1:04d}"
-        customer_name = f"Test Customer {i+1}"
-        vin = f"1HGCM82633A{i+1:06d}"
+        # Template metadata (not customer-specific)
+        template_id = f"GAP-2024-TEMPLATE-{i+1:03d}"
         premium = PREMIUMS[i]
         method = METHODS[i]
         fee = FEES[i]
-        contract_date = date.today() - timedelta(days=i * 30)
+        template_date = date.today() - timedelta(days=i * 30)
 
-        # Generate PDF
-        pdf_bytes = generate_gap_contract_pdf(
-            contract_id=contract_id,
-            account_number=account_number,
-            customer_name=customer_name,
-            make=make,
-            model=model,
-            year=year,
-            vin=vin,
+        # Generate TEMPLATE PDF (blank form for printing and hand-filling)
+        pdf_bytes = generate_gap_contract_template_pdf(
+            template_id=template_id,
             premium=premium,
             method=method,
             fee=fee,
-            contract_date=contract_date,
+            template_date=template_date,
         )
 
         # Upload to S3
-        s3_key = f"contracts/{contract_id}.pdf"
+        s3_key = f"templates/{template_id}.pdf"
 
         try:
             s3_client.put_object(
                 Bucket=S3_BUCKET, Key=s3_key, Body=pdf_bytes, ContentType="application/pdf"
             )
             uploaded_count += 1
-            print(f"  ✅ {contract_id}.pdf ({len(pdf_bytes)} bytes)")
+            print(f"  ✅ {template_id}.pdf ({len(pdf_bytes)} bytes)")
         except ClientError as e:
-            print(f"  ❌ Failed to upload {contract_id}.pdf: {e}")
+            print(f"  ❌ Failed to upload {template_id}.pdf: {e}")
 
     print("=" * 60)
-    print(f"✅ Uploaded {uploaded_count}/15 PDFs to s3://{S3_BUCKET}")
+    print(f"✅ Uploaded {uploaded_count}/15 template PDFs to s3://{S3_BUCKET}/templates/")
     return uploaded_count == 15
 
 
 def list_uploaded_pdfs():
-    """List all uploaded PDFs in the bucket."""
+    """List all uploaded template PDFs in the bucket."""
     s3_client = get_s3_client()
 
     try:
         response = s3_client.list_objects_v2(Bucket=S3_BUCKET)
 
         if "Contents" in response:
-            print("\n📂 Uploaded PDFs:")
+            print("\n📂 Uploaded Template PDFs:")
             print("=" * 60)
             for obj in response["Contents"]:
                 size_kb = obj["Size"] / 1024
                 print(f"  • {obj['Key']} ({size_kb:.1f} KB)")
             print("=" * 60)
-            print(f"Total: {len(response['Contents'])} files")
+            print(f"Total: {len(response['Contents'])} template files")
         else:
-            print("\nℹ️  No PDFs found in bucket")
+            print("\nℹ️  No template PDFs found in bucket")
 
         return True
     except ClientError as e:
@@ -536,15 +534,16 @@ def main():
         list_uploaded_pdfs()
 
     print("\n" + "=" * 60)
-    print("✅ S3 setup complete!")
+    print("✅ S3 template setup complete!")
     print("=" * 60)
     print("\n💡 Verify setup:")
-    print(f"   aws --endpoint-url={S3_ENDPOINT} s3 ls s3://{S3_BUCKET}/contracts/ --recursive")
-    print("\n💡 Download a PDF:")
+    print(f"   aws --endpoint-url={S3_ENDPOINT} s3 ls s3://{S3_BUCKET}/templates/ --recursive")
+    print("\n💡 Download a template PDF:")
     print(
-        f"   aws --endpoint-url={S3_ENDPOINT} s3 cp s3://{S3_BUCKET}/contracts/000000000001/GAP-2024-0001.pdf /tmp/test.pdf"
+        f"   aws --endpoint-url={S3_ENDPOINT} s3 cp s3://{S3_BUCKET}/templates/GAP-2024-TEMPLATE-001.pdf /tmp/template.pdf"
     )
-    print("   open /tmp/test.pdf")
+    print("   open /tmp/template.pdf")
+    print("\n📝 Note: These are BLANK TEMPLATE forms for printing and hand-filling.")
     print()
 
 

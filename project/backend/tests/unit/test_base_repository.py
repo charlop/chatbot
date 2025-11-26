@@ -28,14 +28,15 @@ class TestBaseRepository:
 
         contract = Contract(
             contract_id="TEST-CREATE-001",
-            account_number="ACC-CREATE-001",
             s3_bucket="test-contracts",
             s3_key="contracts/TEST-CREATE-001.pdf",
+            contract_type="GAP",
+            template_version="1.0",
         )
 
         created = await repo.create(contract)
         assert created.contract_id == "TEST-CREATE-001"
-        assert created.account_number == "ACC-CREATE-001"
+        assert created.template_version == "1.0"
 
     async def test_get_by_id(self, db_session: AsyncSession, test_contract: Contract):
         """Test retrieving entity by ID."""
@@ -44,7 +45,7 @@ class TestBaseRepository:
         found = await repo.get_by_id(test_contract.contract_id)
         assert found is not None
         assert found.contract_id == test_contract.contract_id
-        assert found.account_number == test_contract.account_number
+        assert found.template_version == test_contract.template_version
 
     async def test_get_by_id_not_found(self, db_session: AsyncSession):
         """Test get_by_id returns None for non-existent ID."""
@@ -61,9 +62,9 @@ class TestBaseRepository:
         contracts = [
             Contract(
                 contract_id=f"TEST-ALL-{i:03d}",
-                account_number=f"ACC-ALL-{i:03d}",
                 s3_bucket="test-contracts",
                 s3_key=f"contracts/TEST-ALL-{i:03d}.pdf",
+                contract_type="GAP",
             )
             for i in range(5)
         ]
@@ -82,9 +83,9 @@ class TestBaseRepository:
         for i in range(10):
             contract = Contract(
                 contract_id=f"TEST-LIMIT-{i:03d}",
-                account_number=f"ACC-LIMIT-{i:03d}",
                 s3_bucket="test-contracts",
                 s3_key=f"contracts/TEST-LIMIT-{i:03d}.pdf",
+                contract_type="GAP",
             )
             await repo.create(contract)
 
@@ -99,9 +100,9 @@ class TestBaseRepository:
         for i in range(5):
             contract = Contract(
                 contract_id=f"TEST-OFFSET-{i:03d}",
-                account_number=f"ACC-OFFSET-{i:03d}",
                 s3_bucket="test-contracts",
                 s3_key=f"contracts/TEST-OFFSET-{i:03d}.pdf",
+                contract_type="GAP",
             )
             await repo.create(contract)
 
@@ -118,15 +119,15 @@ class TestBaseRepository:
         """Test updating an entity."""
         repo = ContractTestRepository(db_session)
 
-        # Update the contract
-        test_contract.customer_name = "Updated Customer Name"
+        # Update the contract template
+        test_contract.template_version = "2.0"
         updated = await repo.update(test_contract)
 
-        assert updated.customer_name == "Updated Customer Name"
+        assert updated.template_version == "2.0"
 
         # Verify persistence
         found = await repo.get_by_id(test_contract.contract_id)
-        assert found.customer_name == "Updated Customer Name"
+        assert found.template_version == "2.0"
 
     async def test_delete(self, db_session: AsyncSession):
         """Test deleting an entity."""
@@ -135,9 +136,9 @@ class TestBaseRepository:
         # Create a contract to delete
         contract = Contract(
             contract_id="TEST-DELETE-001",
-            account_number="ACC-DELETE-001",
             s3_bucket="test-contracts",
             s3_key="contracts/TEST-DELETE-001.pdf",
+            contract_type="GAP",
         )
         created = await repo.create(contract)
 
@@ -164,9 +165,9 @@ class TestBaseRepository:
         for i in range(3):
             contract = Contract(
                 contract_id=f"TEST-COUNT-{i:03d}",
-                account_number=f"ACC-COUNT-{i:03d}",
                 s3_bucket="test-contracts",
                 s3_key=f"contracts/TEST-COUNT-{i:03d}.pdf",
+                contract_type="GAP",
             )
             await repo.create(contract)
 

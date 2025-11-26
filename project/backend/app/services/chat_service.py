@@ -215,12 +215,15 @@ class ChatService:
         # Get extraction (if exists)
         extraction = await self.extraction_repo.get_by_contract_id(contract_id)
 
-        # Build context
+        # Build context (template-based model)
         context = {
             "contract_id": contract.contract_id,
-            "account_number": contract.account_number,
-            "policy_number": contract.policy_number,
-            "purchase_date": contract.purchase_date.isoformat() if contract.purchase_date else None,
+            "contract_type": contract.contract_type,
+            "template_version": contract.template_version,
+            "effective_date": (
+                contract.effective_date.isoformat() if contract.effective_date else None
+            ),
+            "is_active": contract.is_active,
         }
 
         # Add extraction data if available

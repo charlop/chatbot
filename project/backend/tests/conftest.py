@@ -120,16 +120,16 @@ async def test_user(db_session: AsyncSession):
 
 @pytest.fixture
 async def test_contract(db_session: AsyncSession):
-    """Create a test contract."""
+    """Create a test contract template."""
     from app.models.database.contract import Contract
 
     contract = Contract(
         contract_id="TEST-CONTRACT-001",
-        account_number="ACC-TEST-12345",
         s3_bucket="test-contracts",
         s3_key="contracts/TEST-CONTRACT-001.pdf",
         contract_type="GAP",
-        customer_name="Test Customer",
+        template_version="1.0",
+        is_active=True,
     )
     db_session.add(contract)
     await db_session.commit()

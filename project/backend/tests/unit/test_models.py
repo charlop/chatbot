@@ -25,61 +25,41 @@ class TestContractModel:
     """Tests for Contract model."""
 
     async def test_create_contract(self, db_session: AsyncSession):
-        """Test creating a contract with required fields."""
+        """Test creating a contract template with required fields."""
         contract = Contract(
             contract_id="TEST-001",
-            account_number="ACC-12345",
             s3_bucket="test-bucket",
             s3_key="contracts/TEST-001.pdf",
             contract_type="GAP",
+            template_version="1.0",
+            is_active=True,
         )
         db_session.add(contract)
         await db_session.commit()
         await db_session.refresh(contract)
 
         assert contract.contract_id == "TEST-001"
-        assert contract.account_number == "ACC-12345"
         assert contract.s3_bucket == "test-bucket"
         assert contract.s3_key == "contracts/TEST-001.pdf"
         assert contract.contract_type == "GAP"
+        assert contract.template_version == "1.0"
+        assert contract.is_active is True
         assert contract.created_at is not None
         assert contract.updated_at is not None
-
-    async def test_contract_with_vehicle_info(self, db_session: AsyncSession):
-        """Test contract with JSON vehicle info."""
-        vehicle_info = {
-            "make": "Toyota",
-            "model": "Camry",
-            "year": 2020,
-            "vin": "1234567890",
-        }
-        contract = Contract(
-            contract_id="TEST-002",
-            account_number="ACC-67890",
-            s3_bucket="test-bucket",
-            s3_key="contracts/TEST-002.pdf",
-            vehicle_info=vehicle_info,
-        )
-        db_session.add(contract)
-        await db_session.commit()
-        await db_session.refresh(contract)
-
-        assert contract.vehicle_info == vehicle_info
-        assert contract.vehicle_info["make"] == "Toyota"
 
     async def test_contract_duplicate_id_fails(self, db_session: AsyncSession):
         """Test that duplicate contract_id raises error."""
         contract1 = Contract(
             contract_id="TEST-003",
-            account_number="ACC-111",
             s3_bucket="test-bucket",
             s3_key="contracts/TEST-003.pdf",
+            contract_type="GAP",
         )
         contract2 = Contract(
             contract_id="TEST-003",  # Same ID
-            account_number="ACC-222",
             s3_bucket="test-bucket",
             s3_key="contracts/TEST-003-dup.pdf",
+            contract_type="GAP",
         )
 
         db_session.add(contract1)

@@ -25,10 +25,10 @@ class TestContractService:
 
         cached_response = {
             "contract_id": "TEST-001",
-            "account_number": "ACC-12345",
             "s3_bucket": "test-bucket",
             "s3_key": "test.pdf",
             "contract_type": "GAP",
+            "template_version": "1.0",
             "text_extraction_status": "completed",
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat(),
@@ -39,8 +39,8 @@ class TestContractService:
             result = await service.search_contract(request)
 
         assert result is not None
-        assert result.account_number == "ACC-12345"
         assert result.contract_id == "TEST-001"
+        assert result.template_version == "1.0"
 
     @pytest.mark.asyncio
     async def test_search_contract_found_in_database(self):
@@ -50,10 +50,10 @@ class TestContractService:
 
         mock_contract = Contract(
             contract_id="TEST-001",
-            account_number="ACC-12345",
             s3_bucket="test-bucket",
             s3_key="test.pdf",
             contract_type="GAP",
+            template_version="1.0",
         )
 
         service.contract_repo.get_by_account_number = AsyncMock(return_value=mock_contract)
@@ -67,10 +67,11 @@ class TestContractService:
 
             mock_response = ContractResponse(
                 contract_id="TEST-001",
-                account_number="ACC-12345",
                 s3_bucket="test-bucket",
                 s3_key="test.pdf",
                 contract_type="GAP",
+                template_version="1.0",
+                is_active=True,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )
@@ -80,8 +81,8 @@ class TestContractService:
             result = await service.search_contract(request)
 
         assert result is not None
-        assert result.account_number == "ACC-12345"
         assert result.contract_id == "TEST-001"
+        assert result.template_version == "1.0"
         mock_cache_set.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -129,10 +130,10 @@ class TestContractService:
 
         cached_response = {
             "contract_id": "TEST-001",
-            "account_number": "ACC-12345",
             "s3_bucket": "test-bucket",
             "s3_key": "test.pdf",
             "contract_type": "GAP",
+            "template_version": "1.0",
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat(),
         }
@@ -142,7 +143,7 @@ class TestContractService:
 
         assert result is not None
         assert result.contract_id == "TEST-001"
-        assert result.account_number == "ACC-12345"
+        assert result.template_version == "1.0"
 
     @pytest.mark.asyncio
     async def test_get_contract_from_database(self):
@@ -152,10 +153,10 @@ class TestContractService:
 
         mock_contract = Contract(
             contract_id="TEST-001",
-            account_number="ACC-12345",
             s3_bucket="test-bucket",
             s3_key="test.pdf",
             contract_type="GAP",
+            template_version="1.0",
         )
 
         service.contract_repo.get_by_id = AsyncMock(return_value=mock_contract)
@@ -169,10 +170,11 @@ class TestContractService:
 
             mock_response = ContractResponse(
                 contract_id="TEST-001",
-                account_number="ACC-12345",
                 s3_bucket="test-bucket",
                 s3_key="test.pdf",
                 contract_type="GAP",
+                template_version="1.0",
+                is_active=True,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )
@@ -182,7 +184,7 @@ class TestContractService:
 
         assert result is not None
         assert result.contract_id == "TEST-001"
-        assert result.account_number == "ACC-12345"
+        assert result.template_version == "1.0"
         mock_cache_set.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -200,18 +202,20 @@ class TestContractService:
 
     @pytest.mark.asyncio
     async def test_contract_to_response(self):
-        """Test converting contract ORM to response schema."""
+        """Test converting contract template ORM to response schema."""
+        from datetime import date, timedelta
+
         mock_db = AsyncMock()
         service = ContractService(mock_db)
 
         contract = Contract(
             contract_id="TEST-001",
-            account_number="ACC-12345",
             s3_bucket="test-bucket",
             s3_key="test.pdf",
             contract_type="GAP",
-            customer_name="Test Customer",
-            vehicle_info={"make": "Toyota", "model": "Camry"},
+            template_version="1.0",
+            effective_date=date.today() - timedelta(days=30),
+            is_active=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
@@ -219,10 +223,9 @@ class TestContractService:
         response = await service._contract_to_response(contract)
 
         assert response.contract_id == "TEST-001"
-        assert response.account_number == "ACC-12345"
         assert response.s3_bucket == "test-bucket"
-        assert response.customer_name == "Test Customer"
-        assert response.vehicle_info == {"make": "Toyota", "model": "Camry"}
+        assert response.template_version == "1.0"
+        assert response.is_active is True
 
     @pytest.mark.asyncio
     async def test_log_audit_event(self):
