@@ -52,11 +52,19 @@ class Extraction(Base):
     # GAP Insurance Premium field
     gap_insurance_premium: Mapped[Decimal | None] = mapped_column(NUMERIC(10, 2), nullable=True)
     gap_premium_confidence: Mapped[Decimal | None] = mapped_column(NUMERIC(5, 2), nullable=True)
+    # Format: {"page": 1, "text": "GAP Insurance Premium: $500.00", "bbox": {...}}
+    # - page (required): Page number where text was found
+    # - text (required): Exact text snippet extracted from PDF
+    # - bbox (optional): Frontend-calculated bounding box {x, y, width, height}
     gap_premium_source: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Refund Calculation Method field
     refund_calculation_method: Mapped[str | None] = mapped_column(String(100), nullable=True)
     refund_method_confidence: Mapped[Decimal | None] = mapped_column(NUMERIC(5, 2), nullable=True)
+    # Format: {"page": 1, "text": "Refund Method: Pro-rata", "bbox": {...}}
+    # - page (required): Page number where text was found
+    # - text (required): Exact text snippet extracted from PDF
+    # - bbox (optional): Frontend-calculated bounding box {x, y, width, height}
     refund_method_source: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Cancellation Fee field
@@ -64,6 +72,10 @@ class Extraction(Base):
     cancellation_fee_confidence: Mapped[Decimal | None] = mapped_column(
         NUMERIC(5, 2), nullable=True
     )
+    # Format: {"page": 1, "text": "Cancellation Fee: $50.00", "bbox": {...}}
+    # - page (required): Page number where text was found
+    # - text (required): Exact text snippet extracted from PDF
+    # - bbox (optional): Frontend-calculated bounding box {x, y, width, height}
     cancellation_fee_source: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # LLM Metadata

@@ -62,14 +62,25 @@ class AnthropicProvider(LLMProvider):
                             "source": {
                                 "type": "object",
                                 "properties": {
-                                    "page": {"type": "integer", "description": "Page number"},
-                                    "section": {"type": "string", "description": "Section name"},
+                                    "page": {
+                                        "type": "integer",
+                                        "description": "Page number where the text was found",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "Exact text snippet extracted from the PDF (e.g., 'GAP Insurance Premium: $500.00')",
+                                    },
+                                    "section": {
+                                        "type": "string",
+                                        "description": "Section name (optional)",
+                                    },
                                     "line": {
                                         "type": "integer",
-                                        "description": "Approximate line number",
+                                        "description": "Approximate line number (optional)",
                                     },
                                 },
-                                "description": "Source location in the PDF document",
+                                "required": ["page", "text"],
+                                "description": "Source location in the PDF document with exact text snippet",
                             },
                         },
                         "required": ["value", "confidence"],
@@ -85,10 +96,25 @@ class AnthropicProvider(LLMProvider):
                             "source": {
                                 "type": "object",
                                 "properties": {
-                                    "page": {"type": "integer"},
-                                    "section": {"type": "string"},
-                                    "line": {"type": "integer"},
+                                    "page": {
+                                        "type": "integer",
+                                        "description": "Page number where the text was found",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "Exact text snippet extracted from the PDF",
+                                    },
+                                    "section": {
+                                        "type": "string",
+                                        "description": "Section name (optional)",
+                                    },
+                                    "line": {
+                                        "type": "integer",
+                                        "description": "Approximate line number (optional)",
+                                    },
                                 },
+                                "required": ["page", "text"],
+                                "description": "Source location with exact text snippet",
                             },
                         },
                         "required": ["value", "confidence"],
@@ -104,10 +130,25 @@ class AnthropicProvider(LLMProvider):
                             "source": {
                                 "type": "object",
                                 "properties": {
-                                    "page": {"type": "integer"},
-                                    "section": {"type": "string"},
-                                    "line": {"type": "integer"},
+                                    "page": {
+                                        "type": "integer",
+                                        "description": "Page number where the text was found",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "Exact text snippet extracted from the PDF",
+                                    },
+                                    "section": {
+                                        "type": "string",
+                                        "description": "Section name (optional)",
+                                    },
+                                    "line": {
+                                        "type": "integer",
+                                        "description": "Approximate line number (optional)",
+                                    },
                                 },
+                                "required": ["page", "text"],
+                                "description": "Source location with exact text snippet",
                             },
                         },
                         "required": ["value", "confidence"],
@@ -153,7 +194,14 @@ class AnthropicProvider(LLMProvider):
 For each field, provide:
 - The exact value (or null if not found)
 - Your confidence level (0-100)
-- Source location (page, section, approximate line number)
+- Source location:
+  * page: The page number where you found this information
+  * text: The EXACT text snippet from the document as written (e.g., "GAP Insurance Premium: $500.00")
+  * section: Optional section name
+  * line: Optional approximate line number
+
+IMPORTANT: For the "text" field, copy the exact wording from the document verbatim. Do not paraphrase or summarize.
+This text will be used to locate and highlight the information in the PDF viewer.
 
 Be precise and only report high-confidence findings.
 

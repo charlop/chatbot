@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { CollapsibleChat } from '@/components/chat/CollapsibleChat';
 import { useChat } from '@/hooks/useChat';
+import { useHighlights } from '@/hooks/useHighlights';
 
 export default function ContractDetailsPage() {
   const params = useParams();
@@ -38,6 +39,12 @@ export default function ContractDetailsPage() {
     error: chatError,
     send: sendChatMessage,
   } = useChat(contractId);
+
+  // Generate highlights from extraction data
+  const { highlights } = useHighlights(
+    contractId,
+    contract?.extractedData
+  );
 
   useEffect(() => {
     const fetchContract = async () => {
@@ -108,18 +115,24 @@ export default function ContractDetailsPage() {
     }
   };
 
-  const handleJumpToField = (source: string) => {
-    // Parse source string to extract page number
-    // Format: "Page X, Line Y" or could be an object
+  const handleJumpToField = (source: any) => {
+    // Handle both old string format and new object format
     try {
-      // Try to extract page number from string format "Page X, Line Y"
-      const pageMatch = source.match(/Page\s+(\d+)/i);
-      if (pageMatch) {
-        const pageNum = parseInt(pageMatch[1], 10);
-        console.log('Jumping to page:', pageNum);
-        setCurrentPdfPage(pageNum);
-      } else {
-        console.log('Could not parse page number from source:', source);
+      // If source is an object with page property
+      if (typeof source === 'object' && source?.page) {
+        console.log('Jumping to page:', source.page);
+        setCurrentPdfPage(source.page);
+      }
+      // Legacy string format: "Page X, Line Y"
+      else if (typeof source === 'string') {
+        const pageMatch = source.match(/Page\s+(\d+)/i);
+        if (pageMatch) {
+          const pageNum = parseInt(pageMatch[1], 10);
+          console.log('Jumping to page:', pageNum);
+          setCurrentPdfPage(pageNum);
+        } else {
+          console.log('Could not parse page number from source:', source);
+        }
       }
     } catch (err) {
       console.error('Error parsing source location:', err);
@@ -225,6 +238,7 @@ export default function ContractDetailsPage() {
             contractId={contract.contractId}
             fileName={`${contract.contractId}.pdf`}
             pageNumber={currentPdfPage}
+            highlights={highlights}
           />
         </div>
 

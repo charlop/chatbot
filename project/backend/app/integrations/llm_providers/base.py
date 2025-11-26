@@ -17,7 +17,8 @@ class FieldExtraction(BaseModel):
     value: str | Decimal | None = Field(..., description="Extracted value")
     confidence: Decimal = Field(..., ge=0, le=100, description="Confidence score (0-100)")
     source: dict | None = Field(
-        default=None, description="Source location in PDF (page, section, line)"
+        default=None,
+        description="Source location in PDF with exact text snippet. Format: {page: int, text: str, section?: str, line?: int}",
     )
 
 
@@ -53,17 +54,32 @@ class ExtractionResult(BaseModel):
                 "gap_insurance_premium": {
                     "value": "1249.00",
                     "confidence": 96.5,
-                    "source": {"page": 3, "section": "Pricing", "line": 18},
+                    "source": {
+                        "page": 3,
+                        "text": "GAP Insurance Premium: $1,249.00",
+                        "section": "Pricing",
+                        "line": 18,
+                    },
                 },
                 "refund_calculation_method": {
                     "value": "Pro-Rata",
                     "confidence": 98.2,
-                    "source": {"page": 5, "section": "Cancellation", "line": 4},
+                    "source": {
+                        "page": 5,
+                        "text": "Refund Calculation Method: Pro-Rata",
+                        "section": "Cancellation",
+                        "line": 4,
+                    },
                 },
                 "cancellation_fee": {
                     "value": "50.00",
                     "confidence": 87.3,
-                    "source": {"page": 5, "section": "Fees", "line": 12},
+                    "source": {
+                        "page": 5,
+                        "text": "Cancellation Fee: $50.00",
+                        "section": "Fees",
+                        "line": 12,
+                    },
                 },
                 "model_version": "gpt-4-turbo-preview",
                 "provider": "openai",

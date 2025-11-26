@@ -1,11 +1,18 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 // Cleanup after each test
 afterEach(() => {
   cleanup();
 });
+
+// Mock DOMMatrix for PDF.js in test environment
+global.DOMMatrix = class DOMMatrix {
+  constructor() {
+    // Mock implementation
+  }
+} as any;
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({

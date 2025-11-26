@@ -48,11 +48,18 @@ Please analyze the following contract document and extract these specific fields
 3. **Cancellation Fee**: Any administrative or cancellation fees charged
 
 For each field, provide:
-- The exact value
+- The exact value (or null if not found)
 - Your confidence level (0-100)
-- Source location (page, section, line reference)
+- Source location:
+  * page: The page number where you found this information
+  * text: The EXACT text snippet from the document as written (e.g., "GAP Insurance Premium: $500.00")
+  * section: Optional section name
+  * line: Optional approximate line number
 
-If a value cannot be found with confidence, mark it as null.
+IMPORTANT: For the "text" field, copy the exact wording from the document verbatim. Do not paraphrase or summarize.
+This text will be used to locate and highlight the information in the PDF viewer.
+
+Be precise and only report high-confidence findings.
 
 CONTRACT DOCUMENT:
 {document_text[:15000]}  # Limit to ~15k chars to stay within context window
@@ -82,10 +89,25 @@ CONTRACT DOCUMENT:
                             "source": {
                                 "type": "object",
                                 "properties": {
-                                    "page": {"type": "integer"},
-                                    "section": {"type": "string"},
-                                    "line": {"type": "integer"},
+                                    "page": {
+                                        "type": "integer",
+                                        "description": "Page number where the text was found",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "Exact text snippet extracted from the PDF (e.g., 'GAP Insurance Premium: $500.00')",
+                                    },
+                                    "section": {
+                                        "type": "string",
+                                        "description": "Section name (optional)",
+                                    },
+                                    "line": {
+                                        "type": "integer",
+                                        "description": "Approximate line number (optional)",
+                                    },
                                 },
+                                "required": ["page", "text"],
+                                "description": "Source location in the PDF document with exact text snippet",
                             },
                         },
                         "required": ["value", "confidence"],
@@ -101,10 +123,25 @@ CONTRACT DOCUMENT:
                             "source": {
                                 "type": "object",
                                 "properties": {
-                                    "page": {"type": "integer"},
-                                    "section": {"type": "string"},
-                                    "line": {"type": "integer"},
+                                    "page": {
+                                        "type": "integer",
+                                        "description": "Page number where the text was found",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "Exact text snippet extracted from the PDF",
+                                    },
+                                    "section": {
+                                        "type": "string",
+                                        "description": "Section name (optional)",
+                                    },
+                                    "line": {
+                                        "type": "integer",
+                                        "description": "Approximate line number (optional)",
+                                    },
                                 },
+                                "required": ["page", "text"],
+                                "description": "Source location with exact text snippet",
                             },
                         },
                         "required": ["value", "confidence"],
@@ -120,10 +157,25 @@ CONTRACT DOCUMENT:
                             "source": {
                                 "type": "object",
                                 "properties": {
-                                    "page": {"type": "integer"},
-                                    "section": {"type": "string"},
-                                    "line": {"type": "integer"},
+                                    "page": {
+                                        "type": "integer",
+                                        "description": "Page number where the text was found",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "Exact text snippet extracted from the PDF",
+                                    },
+                                    "section": {
+                                        "type": "string",
+                                        "description": "Section name (optional)",
+                                    },
+                                    "line": {
+                                        "type": "integer",
+                                        "description": "Approximate line number (optional)",
+                                    },
                                 },
+                                "required": ["page", "text"],
+                                "description": "Source location with exact text snippet",
                             },
                         },
                         "required": ["value", "confidence"],
