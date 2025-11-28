@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { HighlightOverlay, HighlightRegion } from './HighlightOverlay';
+import { HighlightRegion } from './HighlightOverlay';
 import { PDFControls } from './PDFControls';
 
 // Dynamically import PDFRenderer with SSR disabled
@@ -47,16 +47,72 @@ export const PDFViewer = ({
   const [pageWidth, setPageWidth] = useState(612); // Standard US Letter width in points
   const [pageHeight, setPageHeight] = useState(792); // Standard US Letter height in points
 
+  // Ref for scroll container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Track if we're programmatically scrolling to avoid scroll loop
+  const isProgrammaticScrollRef = useRef(false);
+
   // Backend PDF endpoint URL
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001/api/v1';
   const pdfEndpoint = `${API_BASE_URL}/contracts/${contractId}/pdf`;
 
-  // Update page when prop changes
+  // Function to scroll to a specific page
+  const scrollToPage = (page: number) => {
+    isProgrammaticScrollRef.current = true;
+    setCurrentPage(page); // Update current page for highlighting
+    const pageElement = scrollContainerRef.current?.querySelector(`[data-page="${page}"]`);
+    pageElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Reset flag after scroll completes
+    setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 1000);
+  };
+
+  // Update page when prop changes (scroll to that page)
   useEffect(() => {
-    if (pageNumber && pageNumber !== currentPage) {
-      setCurrentPage(pageNumber);
+    if (pageNumber) {
+      scrollToPage(pageNumber);
     }
-  }, [pageNumber, currentPage]);
+  }, [pageNumber]);
+
+  // IntersectionObserver to track which page is currently visible
+  useEffect(() => {
+    if (!scrollContainerRef.current || numPages === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Skip updates during programmatic scrolling
+        if (isProgrammaticScrollRef.current) return;
+
+        // Find the most visible page
+        let mostVisiblePage: { page: number; ratio: number } = { page: 1, ratio: 0 };
+
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > mostVisiblePage.ratio) {
+            const pageNum = parseInt(entry.target.getAttribute('data-page') || '1');
+            mostVisiblePage = { page: pageNum, ratio: entry.intersectionRatio };
+          }
+        });
+
+        if (mostVisiblePage.ratio > 0) {
+          setCurrentPage(mostVisiblePage.page);
+        }
+      },
+      {
+        root: scrollContainerRef.current,
+        threshold: [0, 0.25, 0.5, 0.75, 1.0],
+      }
+    );
+
+    // Observe all page elements
+    const pageElements = scrollContainerRef.current.querySelectorAll('[data-page]');
+    pageElements.forEach((el) => observer.observe(el));
+
+    return () => {
+      pageElements.forEach((el) => observer.unobserve(el));
+      observer.disconnect();
+    };
+  }, [numPages]);
 
   const handleLoadSuccess = (pages: number) => {
     setNumPages(pages);
@@ -118,30 +174,19 @@ export const PDFViewer = ({
         fileName={fileName}
       />
 
-      {/* PDF Rendering Area with Highlights */}
-      <div className="flex-1 overflow-auto bg-neutral-50 dark:bg-neutral-900 relative">
-        <div className="flex items-center justify-center min-h-full p-4">
-          <div className="relative">
-            <PDFRenderer
-              contractId={contractId}
-              pageNumber={currentPage}
-              scale={scale}
-              onLoadSuccess={handleLoadSuccess}
-              onLoadError={handleLoadError}
-              onPageLoadSuccess={handlePageLoadSuccess}
-            />
-
-            {/* Highlight overlay positioned on top of PDF */}
-            {highlights.length > 0 && (
-              <HighlightOverlay
-                highlights={highlights}
-                currentPage={currentPage}
-                scale={scale}
-                pageWidth={pageWidth}
-                pageHeight={pageHeight}
-              />
-            )}
-          </div>
+      {/* PDF Rendering Area with Highlights - contained scroll */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto bg-neutral-50 dark:bg-neutral-900 relative min-h-0">
+        <div className="p-4">
+          <PDFRenderer
+            contractId={contractId}
+            scale={scale}
+            highlights={highlights}
+            pageWidth={pageWidth}
+            pageHeight={pageHeight}
+            onLoadSuccess={handleLoadSuccess}
+            onLoadError={handleLoadError}
+            onPageLoadSuccess={handlePageLoadSuccess}
+          />
         </div>
       </div>
     </div>

@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getPDFWorkerSrc, getPDFDocumentOptions } from '@/lib/pdf/config';
+import { HighlightOverlay, HighlightRegion } from './HighlightOverlay';
 
 interface PDFRendererProps {
   contractId: string;
-  pageNumber?: number;
   scale?: number;
+  highlights?: HighlightRegion[];
+  pageWidth?: number;
+  pageHeight?: number;
   onLoadSuccess?: (numPages: number) => void;
   onLoadError?: (error: Error) => void;
   onPageLoadSuccess?: (page: any) => void;
@@ -15,8 +18,10 @@ interface PDFRendererProps {
 
 export const PDFRenderer = ({
   contractId,
-  pageNumber = 1,
   scale = 1.0,
+  highlights = [],
+  pageWidth = 612,
+  pageHeight = 792,
   onLoadSuccess,
   onLoadError,
   onPageLoadSuccess,
@@ -24,6 +29,7 @@ export const PDFRenderer = ({
 }: PDFRendererProps) => {
   const [ReactPDF, setReactPDF] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [numPages, setNumPages] = useState<number>(0);
 
   // Initialize PDF.js worker and load react-pdf components
   useEffect(() => {
@@ -35,11 +41,14 @@ export const PDFRenderer = ({
         // @ts-ignore - CSS imports are handled by webpack
         await import('react-pdf/dist/Page/TextLayer.css');
 
-        // Dynamically import react-pdf to avoid SSR issues
+        // Import react-pdf (this will set default worker to 'pdf.worker.mjs')
         const pdf = await import('react-pdf');
 
-        // Configure worker using centralized config (version auto-detected)
-        pdf.pdfjs.GlobalWorkerOptions.workerSrc = getPDFWorkerSrc(pdf.pdfjs.version);
+        // IMPORTANT: Set worker URL AFTER importing react-pdf to override its default
+        const workerUrl = getPDFWorkerSrc();
+        console.log('[PDFRenderer] Setting worker URL to:', workerUrl);
+        pdf.pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+        console.log('[PDFRenderer] Worker URL after setting:', pdf.pdfjs.GlobalWorkerOptions.workerSrc);
 
         // Store the Document and Page components
         setReactPDF({
@@ -60,7 +69,17 @@ export const PDFRenderer = ({
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001/api/v1';
   const pdfUrl = `${API_BASE_URL}/contracts/${contractId}/pdf`;
 
+  // Get pdfjs version for document options (safe to access even if ReactPDF is null)
+  const pdfjsVersion = ReactPDF?.pdfjs?.version || '4.10.38';
+
+  // Memoize options to prevent unnecessary reloads (must be called unconditionally)
+  const documentOptions = useMemo(
+    () => getPDFDocumentOptions(pdfjsVersion),
+    [pdfjsVersion]
+  );
+
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages);
     onLoadSuccess?.(numPages);
   }
 
@@ -84,9 +103,6 @@ export const PDFRenderer = ({
   }
 
   const { Document, Page } = ReactPDF;
-
-  // Get pdfjs version for document options
-  const pdfjsVersion = ReactPDF.pdfjs?.version || '5.4.394';
 
   return (
     <div className={`pdf-renderer-container ${className}`}>
@@ -113,21 +129,39 @@ export const PDFRenderer = ({
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Please try again or contact support</p>
           </div>
         }
-        options={getPDFDocumentOptions(pdfjsVersion)}
+        options={documentOptions}
       >
-        <Page
-          pageNumber={pageNumber}
-          scale={scale}
-          renderTextLayer={true}      // Enable text layer for search and highlighting
-          renderAnnotationLayer={true} // Enable links/forms
-          loading={
-            <div className="flex items-center justify-center h-full min-h-[400px]">
-              <div className="animate-pulse text-sm text-neutral-500">Loading page...</div>
+        {Array.from({ length: numPages }, (_, i) => {
+          const pageNum = i + 1;
+          return (
+            <div key={pageNum} data-page={pageNum} className="pdf-page-wrapper mb-4 relative">
+              <Page
+                pageNumber={pageNum}
+                scale={scale}
+                renderTextLayer={true}      // Enable text layer for search and highlighting
+                renderAnnotationLayer={true} // Enable links/forms
+                loading={
+                  <div className="flex items-center justify-center h-full min-h-[400px]">
+                    <div className="animate-pulse text-sm text-neutral-500">Loading page {pageNum}...</div>
+                  </div>
+                }
+                onLoadSuccess={onPageLoadSuccess}
+                className="pdf-page"
+              />
+
+              {/* Render highlights for this specific page */}
+              {highlights.length > 0 && (
+                <HighlightOverlay
+                  highlights={highlights}
+                  currentPage={pageNum}
+                  scale={scale}
+                  pageWidth={pageWidth}
+                  pageHeight={pageHeight}
+                />
+              )}
             </div>
-          }
-          onLoadSuccess={onPageLoadSuccess}
-          className="pdf-page"
-        />
+          );
+        })}
       </Document>
     </div>
   );

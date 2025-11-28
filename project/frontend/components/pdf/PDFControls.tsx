@@ -25,18 +25,6 @@ export const PDFControls = ({
   fileName = 'Contract.pdf',
   className = '',
 }: PDFControlsProps) => {
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      onPageChange(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < numPages) {
-      onPageChange(currentPage + 1);
-    }
-  };
-
   const handlePageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const page = parseInt(e.target.value, 10);
     if (page >= 1 && page <= numPages) {
@@ -53,44 +41,21 @@ export const PDFControls = ({
         </h3>
 
         {numPages > 0 && (
-          <div className="flex items-center gap-2 ml-4">
-            <button
-              onClick={handlePreviousPage}
-              disabled={currentPage <= 1}
-              className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Previous page"
-              title="Previous page"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                value={currentPage}
-                onChange={handlePageInput}
-                min={1}
-                max={numPages}
-                className="w-12 px-2 py-1 text-sm text-center border border-neutral-300 dark:border-neutral-600 rounded bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
-              />
-              <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                / {numPages}
-              </span>
-            </div>
-
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage >= numPages}
-              className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Next page"
-              title="Next page"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+          <div className="flex items-center gap-1 ml-4">
+            <span className="text-sm text-neutral-600 dark:text-neutral-400 mr-1">Page</span>
+            <input
+              type="number"
+              value={currentPage}
+              onChange={handlePageInput}
+              min={1}
+              max={numPages}
+              className="w-12 px-2 py-1 text-sm text-center border border-neutral-300 dark:border-neutral-600 rounded bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+              aria-label="Jump to page"
+              title="Jump to page"
+            />
+            <span className="text-sm text-neutral-600 dark:text-neutral-400">
+              / {numPages}
+            </span>
           </div>
         )}
       </div>

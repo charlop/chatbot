@@ -5,10 +5,11 @@
 
 /**
  * Get the PDF.js worker source URL from CDN
- * @param version - The pdfjs version from pdfjs.version
+ * Using CDN to avoid bundling/MIME type issues with Next.js 16
  */
-export function getPDFWorkerSrc(version: string): string {
-  return `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+export function getPDFWorkerSrc(): string {
+  // Use fixed version 4.10.38 (matches our locked pdfjs-dist version)
+  return 'https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
 }
 
 /**
