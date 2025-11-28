@@ -17,13 +17,11 @@ export class PDFTextExtractor {
   private pdfDocument: any = null;
 
   async loadPDF(url: string): Promise<void> {
-    // Dynamic import to avoid SSR issues
+    // Use react-pdf's pdfjs to ensure consistent worker configuration
     const { pdfjs } = await import('react-pdf');
 
-    // Configure worker if not already set (version auto-detected)
-    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      pdfjs.GlobalWorkerOptions.workerSrc = getPDFWorkerSrc(pdfjs.version);
-    }
+    // Set worker URL (react-pdf will have already set a default, we override it)
+    pdfjs.GlobalWorkerOptions.workerSrc = getPDFWorkerSrc();
 
     this.pdfDocument = await pdfjs.getDocument(url).promise;
   }
