@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface HeaderProps {
   title?: string;
@@ -15,6 +16,7 @@ export function Header({ title = 'Contract Refund System', onLogout }: HeaderPro
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const { theme, toggleTheme } = useTheme();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -67,10 +69,10 @@ export function Header({ title = 'Contract Refund System', onLogout }: HeaderPro
   };
 
   return (
-    <header className="h-16 w-full bg-white border-b border-neutral-200 flex items-center justify-between px-6">
+    <header className="h-16 w-full bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-6 transition-colors">
       {/* Page Title */}
       <div>
-        <h1 className="text-xl font-semibold text-neutral-900">{title}</h1>
+        <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">{title}</h1>
       </div>
 
       {/* Right Section - User Menu */}
@@ -79,7 +81,7 @@ export function Header({ title = 'Contract Refund System', onLogout }: HeaderPro
         <button
           ref={buttonRef}
           onClick={handleMenuToggle}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
           aria-label="User menu"
           aria-haspopup="true"
           aria-expanded={isMenuOpen}
@@ -88,7 +90,7 @@ export function Header({ title = 'Contract Refund System', onLogout }: HeaderPro
             <span className="text-white text-sm font-medium">U</span>
           </div>
           <svg
-            className={`w-4 h-4 text-neutral-600 transition-transform ${
+            className={`w-4 h-4 text-neutral-600 dark:text-neutral-400 transition-transform ${
               isMenuOpen ? 'rotate-180' : ''
             }`}
             fill="none"
@@ -109,16 +111,16 @@ export function Header({ title = 'Contract Refund System', onLogout }: HeaderPro
           <div
             ref={menuRef}
             role="menu"
-            className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-neutral-200 py-2 z-50"
+            className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 py-2 z-50"
           >
             {/* Profile */}
             <button
               role="menuitem"
-              className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 transition-colors flex items-center gap-3"
+              className="w-full px-4 py-2 text-left text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors flex items-center gap-3"
               onClick={() => setIsMenuOpen(false)}
             >
               <svg
-                className="w-5 h-5 text-neutral-500"
+                className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -136,11 +138,11 @@ export function Header({ title = 'Contract Refund System', onLogout }: HeaderPro
             {/* Settings */}
             <button
               role="menuitem"
-              className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 transition-colors flex items-center gap-3"
+              className="w-full px-4 py-2 text-left text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors flex items-center gap-3"
               onClick={() => setIsMenuOpen(false)}
             >
               <svg
-                className="w-5 h-5 text-neutral-500"
+                className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -161,8 +163,54 @@ export function Header({ title = 'Contract Refund System', onLogout }: HeaderPro
               Settings
             </button>
 
+            {/* Dark Mode Toggle */}
+            <button
+              role="menuitem"
+              className="w-full px-4 py-2 text-left text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors flex items-center gap-3"
+              onClick={() => {
+                toggleTheme();
+                setIsMenuOpen(false);
+              }}
+            >
+              {theme === 'dark' ? (
+                <>
+                  <svg
+                    className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  Light Mode
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-5 h-5 text-neutral-500 dark:text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                    />
+                  </svg>
+                  Dark Mode
+                </>
+              )}
+            </button>
+
             {/* Divider */}
-            <div className="my-2 border-t border-neutral-200" />
+            <div className="my-2 border-t border-neutral-200 dark:border-neutral-700" />
 
             {/* Logout */}
             <button

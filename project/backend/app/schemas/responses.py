@@ -374,3 +374,83 @@ class MetricsResponse(BaseModel):
             ]
         }
     )
+
+
+class UserResponse(BaseModel):
+    """
+    Response schema for user data.
+    Returned by user management endpoints.
+    """
+
+    user_id: UUID
+    auth_provider: str
+    auth_provider_user_id: str
+    email: str
+    username: str | None
+    first_name: str | None
+    last_name: str | None
+    role: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        alias_generator=to_camel,
+        json_schema_extra={
+            "examples": [
+                {
+                    "userId": "user-id-example",
+                    "authProvider": "auth0",
+                    "authProviderUserId": "auth0|123456789",
+                    "email": "john.doe@example.com",
+                    "username": None,
+                    "firstName": "John",
+                    "lastName": "Doe",
+                    "role": "user",
+                    "isActive": True,
+                    "createdAt": "2025-11-11T10:00:00Z",
+                    "updatedAt": "2025-11-11T10:00:00Z",
+                }
+            ]
+        },
+    )
+
+
+class UserListResponse(BaseModel):
+    """
+    Response schema for paginated user list.
+    """
+
+    users: List[UserResponse]
+    total: int
+    offset: int
+    limit: int
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "users": [
+                        {
+                            "userId": "user-id-example",
+                            "authProvider": "auth0",
+                            "authProviderUserId": "auth0|123456789",
+                            "email": "john.doe@example.com",
+                            "username": None,
+                            "firstName": "John",
+                            "lastName": "Doe",
+                            "role": "user",
+                            "isActive": True,
+                            "createdAt": "2025-11-11T10:00:00Z",
+                            "updatedAt": "2025-11-11T10:00:00Z",
+                        }
+                    ],
+                    "total": 1,
+                    "offset": 0,
+                    "limit": 100,
+                }
+            ]
+        }
+    )

@@ -269,3 +269,155 @@ class ExtractionCreateRequest(BaseModel):
             ]
         }
     }
+
+
+class UserCreateRequest(BaseModel):
+    """
+    Request schema for creating a new user.
+    Admin-only operation.
+    """
+
+    auth_provider: str = Field(
+        ...,
+        description="Authentication provider (e.g., 'auth0', 'okta')",
+    )
+    auth_provider_user_id: str = Field(
+        ...,
+        description="User ID from auth provider",
+    )
+    email: str = Field(
+        ...,
+        description="User's email address",
+    )
+    first_name: str | None = Field(
+        default=None,
+        description="User's first name",
+    )
+    last_name: str | None = Field(
+        default=None,
+        description="User's last name",
+    )
+    role: str = Field(
+        default="user",
+        description="User role ('admin' or 'user')",
+    )
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Validate email format."""
+        v = v.strip().lower()
+        if not v:
+            raise ValueError("Email cannot be empty")
+        # Basic email validation
+        if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", v):
+            raise ValueError(f"Invalid email format: {v}")
+        return v
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        """Validate role is admin or user."""
+        if v not in {"admin", "user"}:
+            raise ValueError("Role must be 'admin' or 'user'")
+        return v
+
+    @field_validator("auth_provider")
+    @classmethod
+    def validate_auth_provider(cls, v: str) -> str:
+        """Validate auth provider is not empty."""
+        v = v.strip()
+        if not v:
+            raise ValueError("Auth provider cannot be empty")
+        return v
+
+    @field_validator("auth_provider_user_id")
+    @classmethod
+    def validate_auth_provider_user_id(cls, v: str) -> str:
+        """Validate auth provider user ID is not empty."""
+        v = v.strip()
+        if not v:
+            raise ValueError("Auth provider user ID cannot be empty")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "auth_provider": "auth0",
+                    "auth_provider_user_id": "auth0|123456789",
+                    "email": "john.doe@example.com",
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "role": "user",
+                }
+            ]
+        }
+    }
+
+
+class UserUpdateRequest(BaseModel):
+    """
+    Request schema for updating a user.
+    Admin-only operation. All fields are optional.
+    """
+
+    email: str | None = Field(
+        default=None,
+        description="User's email address",
+    )
+    first_name: str | None = Field(
+        default=None,
+        description="User's first name",
+    )
+    last_name: str | None = Field(
+        default=None,
+        description="User's last name",
+    )
+    role: str | None = Field(
+        default=None,
+        description="User role ('admin' or 'user')",
+    )
+    is_active: bool | None = Field(
+        default=None,
+        description="User active status",
+    )
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str | None) -> str | None:
+        """Validate email format."""
+        if v is None:
+            return v
+        v = v.strip().lower()
+        if not v:
+            raise ValueError("Email cannot be empty")
+        # Basic email validation
+        if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", v):
+            raise ValueError(f"Invalid email format: {v}")
+        return v
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str | None) -> str | None:
+        """Validate role is admin or user."""
+        if v is None:
+            return v
+        if v not in {"admin", "user"}:
+            raise ValueError("Role must be 'admin' or 'user'")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "role": "admin",
+                },
+                {
+                    "email": "updated.email@example.com",
+                    "first_name": "Jane",
+                    "is_active": False,
+                },
+            ]
+        }
+    }

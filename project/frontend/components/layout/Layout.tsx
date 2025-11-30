@@ -21,7 +21,7 @@ interface LayoutProps {
  */
 export function Layout({ children, title }: LayoutProps) {
   return (
-    <div className="flex h-screen bg-neutral-50 overflow-hidden">
+    <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 overflow-hidden transition-colors">
       {/* Sidebar - Fixed 64px width */}
       <Sidebar />
 
@@ -31,7 +31,7 @@ export function Layout({ children, title }: LayoutProps) {
         <Header title={title} />
 
         {/* Main Content - Scrollable */}
-        <main className="flex-1 overflow-auto p-6" role="main">
+        <main className="flex-1 overflow-auto p-6 bg-neutral-50 dark:bg-neutral-900 transition-colors" role="main">
           {children}
         </main>
       </div>
