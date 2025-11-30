@@ -142,6 +142,9 @@ def scan_for_secrets(content: str, file_path: str) -> List[Tuple[str, str]]:
 def validate_file_path(file_path: str, project_root: str) -> bool:
     """Validate file path for directory traversal and other security issues."""
     try:
+        if "/.claude/plans/" in file_path:
+            sys.exit(0)
+
         # Resolve the absolute path
         abs_path = Path(file_path).resolve()
         project_path = Path(project_root).resolve()
@@ -151,6 +154,7 @@ def validate_file_path(file_path: str, project_root: str) -> bool:
             abs_path.relative_to(project_path)
         except ValueError:
             return False  # Path is outside project directory
+
 
         # Check for suspicious path components
         suspicious_components = ["..", ".git/hooks", ".ssh"]
