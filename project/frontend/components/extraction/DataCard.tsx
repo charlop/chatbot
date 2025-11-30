@@ -192,9 +192,9 @@ export const DataCard: React.FC<DataCardProps> = ({
           <button
             onClick={onViewInDocument}
             className="text-xs font-medium text-primary hover:text-primary-dark transition-colors focus:outline-none focus:underline"
-            aria-label="View in document"
+            aria-label="Scroll to page"
           >
-            View in document →
+            Scroll to page →
           </button>
         )}
       </div>

@@ -31,6 +31,7 @@ export default function ContractDetailsPage() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPdfPage, setCurrentPdfPage] = useState<number | undefined>(undefined);
+  const [scrollTrigger, setScrollTrigger] = useState<number>(0);
 
   // Chat integration
   const {
@@ -120,18 +121,16 @@ export default function ContractDetailsPage() {
     try {
       // If source is an object with page property
       if (typeof source === 'object' && source?.page) {
-        console.log('Jumping to page:', source.page);
         setCurrentPdfPage(source.page);
+        setScrollTrigger(Date.now()); // Force scroll even if page number hasn't changed
       }
       // Legacy string format: "Page X, Line Y"
       else if (typeof source === 'string') {
         const pageMatch = source.match(/Page\s+(\d+)/i);
         if (pageMatch) {
           const pageNum = parseInt(pageMatch[1], 10);
-          console.log('Jumping to page:', pageNum);
           setCurrentPdfPage(pageNum);
-        } else {
-          console.log('Could not parse page number from source:', source);
+          setScrollTrigger(Date.now()); // Force scroll even if page number hasn't changed
         }
       }
     } catch (err) {
@@ -194,17 +193,17 @@ export default function ContractDetailsPage() {
         gap_premium: contract.extractedData.gapPremium || 0,
         gap_premium_confidence: contract.extractedData.gapPremiumConfidence,
         gap_premium_source: contract.extractedData.gapPremiumSource
-          ? `Page ${contract.extractedData.gapPremiumSource.page}, Line ${contract.extractedData.gapPremiumSource.line}`
+          ? `Page ${contract.extractedData.gapPremiumSource.page}`
           : undefined,
         refund_method: contract.extractedData.refundMethod || '',
         refund_method_confidence: contract.extractedData.refundMethodConfidence,
         refund_method_source: contract.extractedData.refundMethodSource
-          ? `Page ${contract.extractedData.refundMethodSource.page}, Line ${contract.extractedData.refundMethodSource.line}`
+          ? `Page ${contract.extractedData.refundMethodSource.page}`
           : undefined,
         cancellation_fee: contract.extractedData.cancellationFee || 0,
         cancellation_fee_confidence: contract.extractedData.cancellationFeeConfidence,
         cancellation_fee_source: contract.extractedData.cancellationFeeSource
-          ? `Page ${contract.extractedData.cancellationFeeSource.page}, Line ${contract.extractedData.cancellationFeeSource.line}`
+          ? `Page ${contract.extractedData.cancellationFeeSource.page}`
           : undefined,
         status: (contract.extractedData.status as 'pending' | 'approved') || 'pending',
       }
@@ -239,6 +238,7 @@ export default function ContractDetailsPage() {
             fileName={`${contract.contractId}.pdf`}
             pageNumber={currentPdfPage}
             highlights={highlights}
+            scrollTrigger={scrollTrigger}
           />
         </div>
 

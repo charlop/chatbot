@@ -26,6 +26,7 @@ export interface PDFViewerProps {
   fileName?: string;
   pageNumber?: number;
   highlights?: HighlightRegion[];
+  scrollTrigger?: number;
   onLoadSuccess?: () => void;
   onLoadError?: (error: Error) => void;
 }
@@ -38,6 +39,7 @@ export const PDFViewer = ({
   fileName = 'Contract.pdf',
   pageNumber = 1,
   highlights = [],
+  scrollTrigger,
   onLoadSuccess,
   onLoadError,
 }: PDFViewerProps) => {
@@ -61,7 +63,9 @@ export const PDFViewer = ({
     isProgrammaticScrollRef.current = true;
     setCurrentPage(page); // Update current page for highlighting
     const pageElement = scrollContainerRef.current?.querySelector(`[data-page="${page}"]`);
-    pageElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (pageElement) {
+      pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     // Reset flag after scroll completes
     setTimeout(() => {
       isProgrammaticScrollRef.current = false;
@@ -74,6 +78,13 @@ export const PDFViewer = ({
       scrollToPage(pageNumber);
     }
   }, [pageNumber]);
+
+  // Scroll when scrollTrigger changes (even if page number is the same)
+  useEffect(() => {
+    if (scrollTrigger && pageNumber) {
+      scrollToPage(pageNumber);
+    }
+  }, [scrollTrigger]);
 
   // IntersectionObserver to track which page is currently visible
   useEffect(() => {

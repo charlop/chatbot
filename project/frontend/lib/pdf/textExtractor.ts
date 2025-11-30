@@ -58,32 +58,56 @@ export class PDFTextExtractor {
   private searchTextItems(items: TextItem[], searchText: string): TextItem[] {
     // Normalize text for comparison
     const normalizedSearch = searchText.toLowerCase().trim();
-    const matches: TextItem[] = [];
-    let currentText = '';
-    let currentItems: TextItem[] = [];
+    let accumulatedText = '';
+    let accumulatedItems: TextItem[] = [];
 
     for (const item of items) {
       // Only process actual TextItem objects with str property
       if (!('str' in item)) continue;
 
-      currentText += item.str.toLowerCase();
-      currentItems.push(item);
+      accumulatedText += item.str.toLowerCase();
+      accumulatedItems.push(item);
 
-      if (currentText.includes(normalizedSearch)) {
-        // Found match - return items that contain the search text
-        return currentItems;
+      const matchIndex = accumulatedText.indexOf(normalizedSearch);
+      if (matchIndex !== -1) {
+        // Found match - now trim to only items that contain the match
+        const matchEnd = matchIndex + normalizedSearch.length;
+
+        // Find which items actually contain the matched text
+        let charCount = 0;
+        let startIdx = 0;
+        let endIdx = accumulatedItems.length;
+
+        for (let i = 0; i < accumulatedItems.length; i++) {
+          const itemLen = accumulatedItems[i].str.length;
+
+          // Items before the match start
+          if (charCount + itemLen <= matchIndex) {
+            startIdx = i + 1;
+          }
+
+          // Items after the match end
+          if (charCount >= matchEnd) {
+            endIdx = i;
+            break;
+          }
+
+          charCount += itemLen;
+        }
+
+        return accumulatedItems.slice(startIdx, endIdx);
       }
 
-      // Keep window of last N items (for multi-item matches)
-      if (currentItems.length > 20) {
-        const removed = currentItems.shift();
+      // Keep sliding window of last N items (for multi-item matches)
+      if (accumulatedItems.length > 20) {
+        const removed = accumulatedItems.shift();
         if (removed) {
-          currentText = currentText.slice(removed.str.length);
+          accumulatedText = accumulatedText.slice(removed.str.length);
         }
       }
     }
 
-    return matches;
+    return [];
   }
 
   private calculateBoundingBox(
