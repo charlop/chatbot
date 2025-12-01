@@ -23,6 +23,8 @@ from app.integrations.llm_providers.base import ExtractionResult, LLMError
 from app.services.llm_service import LLMService
 from app.utils.cache import cache_get, cache_set, cache_delete, cache_delete_pattern, get_redis
 from app.config import settings
+from app.agents.validation_agent import ValidationAgent
+from app.agents.base import AgentContext
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +212,87 @@ class ExtractionService:
             logger.error(f"Unexpected error during LLM extraction for {contract_id}: {e}")
             raise ExtractionServiceError(f"Extraction failed: {str(e)}") from e
 
+        # Run validation agent on extracted data
+        logger.info(f"Running validation agent for contract {contract_id}")
+        try:
+            validation_agent = ValidationAgent(self.db)
+
+            # Prepare extraction data for validation
+            extraction_data = {
+                "gap_insurance_premium": {
+                    "value": (
+                        extraction_result.gap_insurance_premium.value
+                        if extraction_result.gap_insurance_premium
+                        else None
+                    ),
+                    "confidence": (
+                        extraction_result.gap_insurance_premium.confidence
+                        if extraction_result.gap_insurance_premium
+                        else None
+                    ),
+                    "source": (
+                        extraction_result.gap_insurance_premium.source
+                        if extraction_result.gap_insurance_premium
+                        else None
+                    ),
+                },
+                "refund_calculation_method": {
+                    "value": (
+                        extraction_result.refund_calculation_method.value
+                        if extraction_result.refund_calculation_method
+                        else None
+                    ),
+                    "confidence": (
+                        extraction_result.refund_calculation_method.confidence
+                        if extraction_result.refund_calculation_method
+                        else None
+                    ),
+                    "source": (
+                        extraction_result.refund_calculation_method.source
+                        if extraction_result.refund_calculation_method
+                        else None
+                    ),
+                },
+                "cancellation_fee": {
+                    "value": (
+                        extraction_result.cancellation_fee.value
+                        if extraction_result.cancellation_fee
+                        else None
+                    ),
+                    "confidence": (
+                        extraction_result.cancellation_fee.confidence
+                        if extraction_result.cancellation_fee
+                        else None
+                    ),
+                    "source": (
+                        extraction_result.cancellation_fee.source
+                        if extraction_result.cancellation_fee
+                        else None
+                    ),
+                },
+            }
+
+            # Create agent context
+            agent_context = AgentContext(
+                contract_id=contract_id,
+                extraction_id="",  # Will be set after extraction is created
+                extraction_data=extraction_data,
+                document_text=contract.document_text,
+            )
+
+            # Execute validation
+            validation_result = await validation_agent.execute(agent_context)
+
+            logger.info(
+                f"Validation complete for {contract_id}: "
+                f"status={validation_result.overall_status}, "
+                f"checks={len(validation_result.field_results)}"
+            )
+        except Exception as e:
+            logger.error(f"Validation agent failed for contract {contract_id}: {e}")
+            # Don't fail the extraction if validation fails - continue with extraction creation
+            validation_result = None
+
         # Map ExtractionResult to Extraction model
         extraction = Extraction(
             contract_id=contract_id,
@@ -275,6 +358,12 @@ class ExtractionService:
             status="pending",  # Default status, requires human approval
             extracted_at=datetime.utcnow(),
             extracted_by=extracted_by,
+            # Validation results (from validation agent)
+            validation_status=(validation_result.overall_status if validation_result else None),
+            validation_results=(
+                {"field_results": validation_result.field_results} if validation_result else None
+            ),
+            validated_at=datetime.utcnow() if validation_result else None,
         )
 
         # Persist to database
