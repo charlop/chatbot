@@ -104,6 +104,11 @@ class Extraction(Base):
         nullable=True,
     )
 
+    # Validation results (Phase 1: Validation Agent)
+    validation_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    validation_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    validated_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+
     # Auto-updated timestamp
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -131,6 +136,10 @@ class Extraction(Base):
         CheckConstraint(
             "status IN ('pending', 'approved')",
             name="check_extraction_status",
+        ),
+        CheckConstraint(
+            "validation_status IN ('pass', 'warning', 'fail')",
+            name="check_validation_status",
         ),
         CheckConstraint(
             "gap_premium_confidence >= 0 AND gap_premium_confidence <= 100",

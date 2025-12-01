@@ -223,6 +223,11 @@ CREATE TABLE extractions (
     rejected_by UUID REFERENCES users(user_id),
     rejection_reason TEXT,
 
+    -- Validation results (Phase 1: Validation Agent)
+    validation_status VARCHAR(20) CHECK (validation_status IN ('pass', 'warning', 'fail')),
+    validation_results JSONB,
+    validated_at TIMESTAMP WITH TIME ZONE,
+
     -- Ensure only one extraction per contract
     CONSTRAINT unique_contract_extraction UNIQUE(contract_id)
 );
