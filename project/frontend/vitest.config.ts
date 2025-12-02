@@ -11,7 +11,7 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
         '.next/',
@@ -21,7 +21,17 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.test.{ts,tsx}',
         '**/__tests__/**',
+        '**/types/**',
+        'app/layout.tsx', // Next.js root layout
+        'app/globals.css', // CSS files
       ],
+      // Enforce minimum coverage thresholds to catch untested code
+      thresholds: {
+        lines: 80,        // Minimum 80% line coverage
+        functions: 80,    // Minimum 80% function coverage
+        branches: 75,     // Minimum 75% branch coverage
+        statements: 80,   // Minimum 80% statement coverage
+      },
     },
   },
   resolve: {

@@ -57,7 +57,7 @@ export const useChat = (contractId: string | null) => {
       };
       setMessages(prev => [...prev, errorMessage]);
 
-      throw error;
+      return null;
     }
   }, [contractId, messages]);
 

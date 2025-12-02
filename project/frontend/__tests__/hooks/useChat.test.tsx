@@ -202,13 +202,9 @@ describe('useChat Hook', () => {
 
       const { result } = renderHook(() => useChat(mockContractId));
 
-      try {
-        await act(async () => {
-          await result.current.send('User question');
-        });
-      } catch (e) {
-        // Expected error
-      }
+      await act(async () => {
+        await result.current.send('User question');
+      });
 
       await waitFor(() => {
         expect(result.current.error).toEqual(apiError);
@@ -221,13 +217,9 @@ describe('useChat Hook', () => {
 
       const { result } = renderHook(() => useChat(mockContractId));
 
-      try {
-        await act(async () => {
-          await result.current.send('User question');
-        });
-      } catch (e) {
-        // Expected
-      }
+      await act(async () => {
+        await result.current.send('User question');
+      });
 
       await waitFor(() => {
         expect(result.current.messages).toHaveLength(2);
@@ -244,13 +236,9 @@ describe('useChat Hook', () => {
 
       const { result } = renderHook(() => useChat(mockContractId));
 
-      try {
-        await act(async () => {
-          await result.current.send('Question 1');
-        });
-      } catch (e) {
-        // Expected
-      }
+      await act(async () => {
+        await result.current.send('Question 1');
+      });
 
       await waitFor(() => {
         expect(result.current.error).toBeTruthy();
@@ -302,13 +290,9 @@ describe('useChat Hook', () => {
 
       const { result } = renderHook(() => useChat(mockContractId));
 
-      try {
-        await act(async () => {
-          await result.current.send('User question');
-        });
-      } catch (e) {
-        // Expected
-      }
+      await act(async () => {
+        await result.current.send('User question');
+      });
 
       await waitFor(() => {
         expect(result.current.error).toBeTruthy();
