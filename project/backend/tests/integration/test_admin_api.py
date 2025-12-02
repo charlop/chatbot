@@ -349,7 +349,7 @@ class TestAdminUpdateUserEndpoint:
     async def test_update_user_deactivate(
         self, async_client: AsyncClient, db_session: AsyncSession
     ):
-        """Test deactivating a user."""
+        """Test deactivating a user using snake_case field."""
         # Create active user
         user = User(
             auth_provider="auth0",
@@ -362,7 +362,7 @@ class TestAdminUpdateUserEndpoint:
         await db_session.commit()
         await db_session.refresh(user)
 
-        # Deactivate user
+        # Deactivate user using snake_case
         response = await async_client.put(
             f"/api/v1/admin/users/{user.user_id}",
             json={"is_active": False},
@@ -371,6 +371,58 @@ class TestAdminUpdateUserEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["isActive"] is False
+
+    async def test_update_user_deactivate_camelcase(
+        self, async_client: AsyncClient, db_session: AsyncSession
+    ):
+        """Test deactivating a user using camelCase field (frontend format)."""
+        # Create active user
+        user = User(
+            auth_provider="auth0",
+            auth_provider_user_id="auth0|deactivate-camel-test-001",
+            email="deactivate.camel@example.com",
+            role="user",
+            is_active=True,
+        )
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
+
+        # Deactivate user using camelCase (as sent by frontend)
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user.user_id}",
+            json={"isActive": False},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["isActive"] is False
+
+    async def test_update_user_reactivate_camelcase(
+        self, async_client: AsyncClient, db_session: AsyncSession
+    ):
+        """Test reactivating a user using camelCase field (frontend format)."""
+        # Create inactive user
+        user = User(
+            auth_provider="auth0",
+            auth_provider_user_id="auth0|reactivate-camel-test-001",
+            email="reactivate.camel@example.com",
+            role="user",
+            is_active=False,
+        )
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
+
+        # Reactivate user using camelCase (as sent by frontend)
+        response = await async_client.put(
+            f"/api/v1/admin/users/{user.user_id}",
+            json={"isActive": True},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["isActive"] is True
 
     async def test_update_user_not_found(self, async_client: AsyncClient):
         """Test updating non-existent user returns 404."""
