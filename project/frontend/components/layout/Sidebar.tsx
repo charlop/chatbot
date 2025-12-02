@@ -67,7 +67,7 @@ export function Sidebar() {
       {/* Logo/Brand Section */}
       <div className="mb-8">
         <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-lg">CR</span>
+          <span className="text-white font-bold text-base">cAI</span>
         </div>
       </div>
 
