@@ -1,0 +1,240 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SearchResults > Snapshot > should match snapshot with full data 1`] = `
+<div>
+  <div
+    class="w-full bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 p-6 transition-colors"
+  >
+    <div
+      class="flex items-start gap-4 mb-6"
+    >
+      <div
+        class="flex-shrink-0 w-12 h-12 bg-success-100 dark:bg-success-900/30 rounded-full flex items-center justify-center"
+      >
+        <svg
+          class="w-6 h-6 text-success-600 dark:text-success-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M5 13l4 4L19 7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </div>
+      <div
+        class="flex-1"
+      >
+        <h3
+          class="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+        >
+          Contract Template Found
+        </h3>
+        <p
+          class="text-sm text-neutral-600 dark:text-neutral-400 mt-1"
+        >
+          We found a contract template matching your search criteria.
+        </p>
+      </div>
+    </div>
+    <div
+      class="space-y-4 mb-6"
+    >
+      <div
+        class="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+      >
+        <span
+          class="text-sm font-medium text-neutral-500 dark:text-neutral-400"
+        >
+          Template ID
+        </span>
+        <span
+          class="text-sm font-mono text-neutral-900 dark:text-neutral-100"
+        >
+          GAP-2024-001
+        </span>
+      </div>
+      <div
+        class="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+      >
+        <span
+          class="text-sm font-medium text-neutral-500 dark:text-neutral-400"
+        >
+          Contract Type
+        </span>
+        <span
+          class="text-xs font-medium px-2.5 py-1 rounded-full text-primary-600 bg-primary-100 dark:text-primary-400 dark:bg-primary-900/30"
+        >
+          GAP Insurance
+        </span>
+      </div>
+      <div
+        class="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+      >
+        <span
+          class="text-sm font-medium text-neutral-500 dark:text-neutral-400"
+        >
+          Template Version
+        </span>
+        <span
+          class="text-sm text-neutral-900 dark:text-neutral-100"
+        >
+          2.1
+        </span>
+      </div>
+      <div
+        class="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+      >
+        <span
+          class="text-sm font-medium text-neutral-500 dark:text-neutral-400"
+        >
+          Effective Date
+        </span>
+        <span
+          class="text-sm text-neutral-900 dark:text-neutral-100"
+        >
+          2023-12-31
+        </span>
+      </div>
+      <div
+        class="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+      >
+        <span
+          class="text-sm font-medium text-neutral-500 dark:text-neutral-400"
+        >
+          Created Date
+        </span>
+        <span
+          class="text-sm text-neutral-900 dark:text-neutral-100"
+        >
+          2023-12-14
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex gap-3"
+    >
+      <button
+        aria-busy="false"
+        class="inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#954293] text-white hover:bg-[#650360] focus:ring-[#954293] px-4 py-2 text-base   flex-1"
+        type="button"
+      >
+        View Full Details
+      </button>
+      <button
+        aria-busy="false"
+        class="inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 border-2 border-[#954293] bg-transparent text-[#954293] hover:bg-[#fee6ff] focus:ring-[#954293] px-4 py-2 text-base   flex-1"
+        type="button"
+      >
+        New Search
+      </button>
+    </div>
+    <div
+      class="mt-4 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-md"
+    >
+      <p
+        class="text-xs text-primary-700 dark:text-primary-300"
+      >
+        <strong>
+          Note:
+        </strong>
+         Full contract template details including AI-extracted data are available in the contract details view.
+      </p>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SearchResults > Snapshot > should match snapshot with minimal data 1`] = `
+<div>
+  <div
+    class="w-full bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 p-6 transition-colors"
+  >
+    <div
+      class="flex items-start gap-4 mb-6"
+    >
+      <div
+        class="flex-shrink-0 w-12 h-12 bg-success-100 dark:bg-success-900/30 rounded-full flex items-center justify-center"
+      >
+        <svg
+          class="w-6 h-6 text-success-600 dark:text-success-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M5 13l4 4L19 7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </div>
+      <div
+        class="flex-1"
+      >
+        <h3
+          class="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+        >
+          Contract Template Found
+        </h3>
+        <p
+          class="text-sm text-neutral-600 dark:text-neutral-400 mt-1"
+        >
+          We found a contract template matching your search criteria.
+        </p>
+      </div>
+    </div>
+    <div
+      class="space-y-4 mb-6"
+    >
+      <div
+        class="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+      >
+        <span
+          class="text-sm font-medium text-neutral-500 dark:text-neutral-400"
+        >
+          Template ID
+        </span>
+        <span
+          class="text-sm font-mono text-neutral-900 dark:text-neutral-100"
+        >
+          MIN-001
+        </span>
+      </div>
+      <div
+        class="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700"
+      >
+        <span
+          class="text-sm font-medium text-neutral-500 dark:text-neutral-400"
+        >
+          Contract Type
+        </span>
+        <span
+          class="text-xs font-medium px-2.5 py-1 rounded-full text-neutral-600 bg-neutral-100 dark:text-neutral-400 dark:bg-neutral-800"
+        >
+          Basic
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex gap-3"
+    />
+    <div
+      class="mt-4 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-md"
+    >
+      <p
+        class="text-xs text-primary-700 dark:text-primary-300"
+      >
+        <strong>
+          Note:
+        </strong>
+         Full contract template details including AI-extracted data are available in the contract details view.
+      </p>
+    </div>
+  </div>
+</div>
+`;

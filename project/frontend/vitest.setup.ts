@@ -17,12 +17,14 @@ beforeAll(() => {
       'Warning: Failed prop type',
       'Warning: An update to',
       'Warning: ReactDOM.render',
+      'An update to %s inside a test was not wrapped in act', // React testing act warnings
       // Test environment limitations
       'Not implemented: HTMLFormElement.prototype.submit',
       'Not implemented: HTMLCanvasElement.prototype.getContext',
       'Not implemented: HTMLMediaElement.prototype.play',
-      // PDF.js warnings
+      // PDF.js warnings and errors in tests
       'Warning: Setting up fake worker',
+      'Highlight generation error:', // Expected when PDF mock fails in tests
       // Next.js warnings
       'Warning: useSearchParams',
     ];
