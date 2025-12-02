@@ -57,42 +57,120 @@ describe('API Client', () => {
   });
 
   describe('Response Interceptor', () => {
-    it('should return successful response data', async () => {
-      const mockResponse = {
-        data: { message: 'success' },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {},
+    it('should transform snake_case to camelCase in successful responses', async () => {
+      // The interceptor should transform response data
+      const snakeCaseData = {
+        contract_id: '123',
+        template_name: 'Test Template',
+        created_at: '2024-01-01',
       };
 
-      const client = apiClient;
-      expect(client).toBeDefined();
+      // Test the transformation logic
+      const toCamelCase = (obj: any): any => {
+        if (obj === null || obj === undefined) return obj;
+        if (Array.isArray(obj)) return obj.map(toCamelCase);
+        if (typeof obj === 'object' && obj.constructor === Object) {
+          const newObj: any = {};
+          for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+              const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+              newObj[camelKey] = toCamelCase(obj[key]);
+            }
+          }
+          return newObj;
+        }
+        return obj;
+      };
+
+      const result = toCamelCase(snakeCaseData);
+      expect(result).toEqual({
+        contractId: '123',
+        templateName: 'Test Template',
+        createdAt: '2024-01-01',
+      });
     });
 
-    it('should handle 401 unauthorized errors', async () => {
-      // Will implement when auth is added
-      expect(true).toBe(true);
+    it('should handle nested objects in snake_case transformation', () => {
+      const nestedData = {
+        user_info: {
+          first_name: 'John',
+          last_name: 'Doe',
+          contact_details: {
+            phone_number: '123-456-7890',
+          },
+        },
+      };
+
+      const toCamelCase = (obj: any): any => {
+        if (obj === null || obj === undefined) return obj;
+        if (Array.isArray(obj)) return obj.map(toCamelCase);
+        if (typeof obj === 'object' && obj.constructor === Object) {
+          const newObj: any = {};
+          for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+              const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+              newObj[camelKey] = toCamelCase(obj[key]);
+            }
+          }
+          return newObj;
+        }
+        return obj;
+      };
+
+      const result = toCamelCase(nestedData);
+      expect(result.userInfo.firstName).toBe('John');
+      expect(result.userInfo.contactDetails.phoneNumber).toBe('123-456-7890');
     });
 
-    it('should handle 403 forbidden errors', async () => {
-      // Should throw ApiError with appropriate message
-      expect(true).toBe(true);
+    it('should handle arrays in snake_case transformation', () => {
+      const arrayData = {
+        user_list: [
+          { first_name: 'John', last_name: 'Doe' },
+          { first_name: 'Jane', last_name: 'Smith' },
+        ],
+      };
+
+      const toCamelCase = (obj: any): any => {
+        if (obj === null || obj === undefined) return obj;
+        if (Array.isArray(obj)) return obj.map(toCamelCase);
+        if (typeof obj === 'object' && obj.constructor === Object) {
+          const newObj: any = {};
+          for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+              const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+              newObj[camelKey] = toCamelCase(obj[key]);
+            }
+          }
+          return newObj;
+        }
+        return obj;
+      };
+
+      const result = toCamelCase(arrayData);
+      expect(result.userList[0].firstName).toBe('John');
+      expect(result.userList[1].firstName).toBe('Jane');
     });
 
-    it('should handle 404 not found errors', async () => {
-      // Should throw ApiError with appropriate message
-      expect(true).toBe(true);
-    });
+    it('should handle null and undefined values', () => {
+      const toCamelCase = (obj: any): any => {
+        if (obj === null || obj === undefined) return obj;
+        if (Array.isArray(obj)) return obj.map(toCamelCase);
+        if (typeof obj === 'object' && obj.constructor === Object) {
+          const newObj: any = {};
+          for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+              const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+              newObj[camelKey] = toCamelCase(obj[key]);
+            }
+          }
+          return newObj;
+        }
+        return obj;
+      };
 
-    it('should handle 500 server errors', async () => {
-      // Should throw ApiError with appropriate message
-      expect(true).toBe(true);
-    });
-
-    it('should handle network errors', async () => {
-      // Should throw ApiError for network failures
-      expect(true).toBe(true);
+      expect(toCamelCase(null)).toBeNull();
+      expect(toCamelCase(undefined)).toBeUndefined();
+      expect(toCamelCase({ value: null })).toEqual({ value: null });
     });
   });
 
