@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ConfidenceBadge } from './ConfidenceBadge';
+import { ValidationBadge } from './ValidationBadge';
 
 export interface DataCardProps {
   /**
@@ -46,6 +47,16 @@ export interface DataCardProps {
    * Optional CSS class
    */
   className?: string;
+
+  /**
+   * Validation status (Phase 1: Validation Agent)
+   */
+  validationStatus?: 'pass' | 'warning' | 'fail';
+
+  /**
+   * Validation reason (Phase 1: Validation Agent)
+   */
+  validationReason?: string;
 }
 
 /**
@@ -61,6 +72,8 @@ export const DataCard: React.FC<DataCardProps> = ({
   onChange,
   onViewInDocument,
   className = '',
+  validationStatus,
+  validationReason,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -124,10 +137,13 @@ export const DataCard: React.FC<DataCardProps> = ({
 
   return (
     <div className={`bg-white border border-neutral-200 rounded-lg p-4 ${className}`}>
-      {/* Label and Confidence */}
+      {/* Label and Badges */}
       <div className="flex items-start justify-between mb-2">
         <h3 className="text-sm font-semibold text-neutral-900">{label}</h3>
-        <ConfidenceBadge confidence={confidence} />
+        <div className="flex items-center gap-2">
+          <ConfidenceBadge confidence={confidence} />
+          <ValidationBadge status={validationStatus} reason={validationReason} />
+        </div>
       </div>
 
       {/* Value - Editable */}

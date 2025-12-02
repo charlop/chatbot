@@ -108,6 +108,15 @@ export const DataPanel: React.FC<DataPanelProps> = ({
 
   const correctionsCount = corrections.size;
 
+  // Helper to get validation results for a field
+  const getFieldValidation = (fieldName: string) => {
+    const result = extraction.validation_results?.find((r) => r.field_name === fieldName);
+    return {
+      validationStatus: result?.status,
+      validationReason: result?.message,
+    };
+  };
+
   return (
     <>
       <div
@@ -140,6 +149,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({
                 ? () => onViewInDocument(extractedData.gapPremiumSource)
                 : undefined
             }
+            {...getFieldValidation('gap_insurance_premium')}
           />
 
           {/* Refund Calculation Method */}
@@ -160,6 +170,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({
                 ? () => onViewInDocument(extractedData.refundMethodSource)
                 : undefined
             }
+            {...getFieldValidation('refund_calculation_method')}
           />
 
           {/* Cancellation Fee */}
@@ -180,6 +191,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({
                 ? () => onViewInDocument(extractedData.cancellationFeeSource)
                 : undefined
             }
+            {...getFieldValidation('cancellation_fee')}
           />
 
           {/* Audit Trail */}
