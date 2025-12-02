@@ -1,6 +1,16 @@
 import { apiClient } from './client';
 
 /**
+ * Validation result for a single field
+ */
+export interface FieldValidation {
+  field_name: string;
+  status: 'pass' | 'warning' | 'fail';
+  message: string;
+  tool_name?: string;
+}
+
+/**
  * Type definitions for Extraction API responses
  */
 export interface Extraction {
@@ -18,6 +28,10 @@ export interface Extraction {
   status?: 'pending' | 'approved';
   created_at?: string;
   updated_at?: string;
+  // Validation results (Phase 1: Validation Agent)
+  validation_status?: 'pass' | 'warning' | 'fail';
+  validation_results?: FieldValidation[];
+  validated_at?: string;
 }
 
 /**
