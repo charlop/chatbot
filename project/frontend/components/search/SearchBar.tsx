@@ -31,14 +31,9 @@ const formatAccountNumber = (value: string): string => {
   // Remove all non-digit characters
   const cleaned = value.replace(/\D/g, '');
 
-  // Only format if it looks like an account number (all digits)
+  // If no digits, return empty (don't try to format template IDs here)
   if (cleaned.length === 0) {
-    return value; // Return as-is if no digits (could be template ID)
-  }
-
-  // If value has non-digits and isn't just digits, assume it's a template ID
-  if (value !== cleaned && cleaned.length < value.length) {
-    return value; // Don't format template IDs
+    return '';
   }
 
   // Add dashes at appropriate positions (3-4-5 pattern)
@@ -101,7 +96,7 @@ export const SearchBar = ({
 
     // Validate input
     if (!trimmed) {
-      setError('Account number or template ID is required');
+      setError('Account number is required');
       return;
     }
 
@@ -167,14 +162,14 @@ export const SearchBar = ({
             placeholder={placeholder}
             helperText={
               !error
-                ? 'Account: 12 digits (XXX-XXXX-XXXXX) or Template ID (e.g., GAP-2024-TEMPLATE-001)'
+                ? 'Account format: XXX-XXXX-XXXXX (12 digits) or Template ID (e.g., GAP-2024-TEMPLATE-001)'
                 : undefined
             }
             error={error}
             disabled={isLoading}
             autoFocus={autoFocus}
             fullWidth
-            aria-label="Search for contract template"
+            aria-label="Account number"
           />
 
           {searchTerm && (

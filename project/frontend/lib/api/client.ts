@@ -27,7 +27,7 @@ const transformError = (error: AxiosError): ApiError => {
     // Server responded with error status
     const status = error.response.status;
     const data = error.response.data as any;
-    const message = data?.message || error.message || 'An error occurred';
+    const message = data?.detail || data?.message || error.message || 'An error occurred';
 
     return new ApiError(message, status, data);
   } else if (error.request) {

@@ -41,7 +41,19 @@ export const PDFControls = ({
         </h3>
 
         {numPages > 0 && (
-          <div className="flex items-center gap-1 ml-4">
+          <div className="flex items-center gap-2 ml-4">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="p-1 rounded bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Previous page"
+              title="Previous page"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
             <span className="text-sm text-neutral-600 dark:text-neutral-400 mr-1">Page</span>
             <input
               type="number"
@@ -56,6 +68,18 @@ export const PDFControls = ({
             <span className="text-sm text-neutral-600 dark:text-neutral-400">
               / {numPages}
             </span>
+
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= numPages}
+              className="p-1 rounded bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Next page"
+              title="Next page"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         )}
       </div>

@@ -31,15 +31,19 @@ export const getRecentSearches = (): RecentSearch[] => {
     // Support old format (array of strings) and migrate
     if (parsed.length > 0 && typeof parsed[0] === 'string') {
       // Old format: array of account numbers
-      // Migrate to new format
-      return parsed
-        .filter((search) => typeof search === 'string' && search.trim().length > 0)
-        .map((accountNumber) => ({
-          searchTerm: accountNumber,
-          searchType: 'account' as const,
-          templateId: '', // Unknown for migrated data
-          timestamp: new Date().toISOString(),
-        }));
+      // Migrate to new format with deduplication
+      const uniqueSearches = new Set(
+        parsed
+          .filter((search) => typeof search === 'string' && search.trim().length > 0)
+          .map((s) => s.trim())
+      );
+
+      return Array.from(uniqueSearches).map((accountNumber) => ({
+        searchTerm: accountNumber,
+        searchType: 'account' as const,
+        templateId: '', // Unknown for migrated data
+        timestamp: new Date().toISOString(),
+      }));
     }
 
     // New format: array of RecentSearch objects
@@ -50,7 +54,7 @@ export const getRecentSearches = (): RecentSearch[] => {
           typeof search === 'object' &&
           search.searchTerm &&
           search.searchType &&
-          search.templateId
+          search.templateId !== undefined // Allow empty string for migrated data
       )
       .map((search) => ({
         searchTerm: search.searchTerm.trim(),

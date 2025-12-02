@@ -29,6 +29,17 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Mock IntersectionObserver for PDFViewer
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+  takeRecords() {
+    return [];
+  }
+} as any;
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter() {

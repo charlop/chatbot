@@ -204,13 +204,13 @@ export const DataCard: React.FC<DataCardProps> = ({
           <span className="text-xs text-neutral-400">No source location</span>
         )}
 
-        {onViewInDocument && (
+        {onViewInDocument && source && (
           <button
             onClick={onViewInDocument}
             className="text-xs font-medium text-primary hover:text-primary-dark transition-colors focus:outline-none focus:underline"
-            aria-label="Scroll to page"
+            aria-label="View in document"
           >
-            Scroll to page →
+            View in document →
           </button>
         )}
       </div>

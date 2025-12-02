@@ -82,7 +82,7 @@ export const RecentSearches = ({
             className="w-full text-left px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded border border-neutral-200 dark:border-neutral-700 transition-colors"
             aria-label={`Search for ${search.searchTerm}`}
           >
-            {formatRecentSearch(search)}
+            {search.searchTerm}
           </button>
         ))}
       </div>

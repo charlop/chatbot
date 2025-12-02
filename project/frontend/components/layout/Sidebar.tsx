@@ -63,7 +63,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside role="navigation" className="w-16 h-screen bg-neutral-900 flex flex-col items-center py-4">
+    <aside className="w-16 h-screen bg-neutral-900 flex flex-col items-center py-4">
       {/* Logo/Brand Section */}
       <div className="mb-8">
         <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
@@ -72,7 +72,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation Section */}
-      <nav className="flex-1 flex flex-col items-center space-y-2" role="navigation">
+      <nav className="flex-1 flex flex-col items-center space-y-2">
         {navigationItems.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
 
