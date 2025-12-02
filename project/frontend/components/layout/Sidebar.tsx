@@ -63,7 +63,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-16 h-screen bg-neutral-900 flex flex-col items-center py-4">
+    <aside role="navigation" className="w-16 h-screen bg-neutral-900 flex flex-col items-center py-4">
       {/* Logo/Brand Section */}
       <div className="mb-8">
         <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">

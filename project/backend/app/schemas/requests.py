@@ -5,8 +5,14 @@ Handles request validation and serialization.
 
 import re
 from typing import List
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from uuid import UUID
+
+
+def to_camel(string: str) -> str:
+    """Convert snake_case to camelCase."""
+    components = string.split("_")
+    return components[0] + "".join(x.title() for x in components[1:])
 
 
 class ContractSearchRequest(BaseModel):
@@ -407,17 +413,19 @@ class UserUpdateRequest(BaseModel):
             raise ValueError("Role must be 'admin' or 'user'")
         return v
 
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        populate_by_name=True,  # Allow both camelCase and snake_case
+        alias_generator=to_camel,  # Accept camelCase from frontend
+        json_schema_extra={
             "examples": [
                 {
                     "role": "admin",
                 },
                 {
                     "email": "updated.email@example.com",
-                    "first_name": "Jane",
-                    "is_active": False,
+                    "firstName": "Jane",
+                    "isActive": False,
                 },
             ]
-        }
-    }
+        },
+    )

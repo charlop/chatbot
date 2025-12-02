@@ -98,11 +98,31 @@ class TestValidationAgentOrchestration:
     @pytest.mark.asyncio
     async def test_skipped_results_not_included(self, validation_agent, sample_agent_context):
         """Test that SKIPPED results are filtered out from field_results."""
-        with patch.object(
-            validation_agent.tools[0], "execute", new_callable=AsyncMock
-        ) as mock_tool:
-            # Return SKIPPED status
-            mock_tool.return_value = ToolResult(
+        with (
+            patch.object(
+                validation_agent.tools[0], "execute", new_callable=AsyncMock
+            ) as mock_tool1,
+            patch.object(
+                validation_agent.tools[1], "execute", new_callable=AsyncMock
+            ) as mock_tool2,
+            patch.object(
+                validation_agent.tools[2], "execute", new_callable=AsyncMock
+            ) as mock_tool3,
+        ):
+            # All tools return SKIPPED status
+            mock_tool1.return_value = ToolResult(
+                status=ToolStatus.SKIPPED,
+                field_name="gap_insurance_premium",
+                message="Not applicable",
+                tool_name="TestTool",
+            )
+            mock_tool2.return_value = ToolResult(
+                status=ToolStatus.SKIPPED,
+                field_name="gap_insurance_premium",
+                message="Not applicable",
+                tool_name="TestTool",
+            )
+            mock_tool3.return_value = ToolResult(
                 status=ToolStatus.SKIPPED,
                 field_name="gap_insurance_premium",
                 message="Not applicable",
@@ -234,13 +254,34 @@ class TestOverallStatusComputation:
     @pytest.mark.asyncio
     async def test_error_treated_as_fail(self, validation_agent, sample_agent_context):
         """Test that ERROR status is treated as FAIL."""
-        with patch.object(
-            validation_agent.tools[0], "execute", new_callable=AsyncMock
-        ) as mock_tool:
-            mock_tool.return_value = ToolResult(
+        with (
+            patch.object(
+                validation_agent.tools[0], "execute", new_callable=AsyncMock
+            ) as mock_tool1,
+            patch.object(
+                validation_agent.tools[1], "execute", new_callable=AsyncMock
+            ) as mock_tool2,
+            patch.object(
+                validation_agent.tools[2], "execute", new_callable=AsyncMock
+            ) as mock_tool3,
+        ):
+            # First tool returns ERROR, others return PASS
+            mock_tool1.return_value = ToolResult(
                 status=ToolStatus.ERROR,
                 field_name="gap_insurance_premium",
                 message="Tool execution error",
+                tool_name="TestTool",
+            )
+            mock_tool2.return_value = ToolResult(
+                status=ToolStatus.PASS,
+                field_name="gap_insurance_premium",
+                message="Valid",
+                tool_name="TestTool",
+            )
+            mock_tool3.return_value = ToolResult(
+                status=ToolStatus.PASS,
+                field_name="gap_insurance_premium",
+                message="Valid",
                 tool_name="TestTool",
             )
 
@@ -255,10 +296,31 @@ class TestSummaryGeneration:
     @pytest.mark.asyncio
     async def test_summary_for_pass(self, validation_agent, sample_agent_context):
         """Test summary message when all validations pass."""
-        with patch.object(
-            validation_agent.tools[0], "execute", new_callable=AsyncMock
-        ) as mock_tool:
-            mock_tool.return_value = ToolResult(
+        with (
+            patch.object(
+                validation_agent.tools[0], "execute", new_callable=AsyncMock
+            ) as mock_tool1,
+            patch.object(
+                validation_agent.tools[1], "execute", new_callable=AsyncMock
+            ) as mock_tool2,
+            patch.object(
+                validation_agent.tools[2], "execute", new_callable=AsyncMock
+            ) as mock_tool3,
+        ):
+            # All tools return PASS
+            mock_tool1.return_value = ToolResult(
+                status=ToolStatus.PASS,
+                field_name="gap_insurance_premium",
+                message="Valid",
+                tool_name="TestTool",
+            )
+            mock_tool2.return_value = ToolResult(
+                status=ToolStatus.PASS,
+                field_name="gap_insurance_premium",
+                message="Valid",
+                tool_name="TestTool",
+            )
+            mock_tool3.return_value = ToolResult(
                 status=ToolStatus.PASS,
                 field_name="gap_insurance_premium",
                 message="Valid",
@@ -267,18 +329,40 @@ class TestSummaryGeneration:
 
             result = await validation_agent.execute(sample_agent_context)
 
-            assert "All validations passed" in result.summary
+            assert "Validation passed" in result.summary
+            assert "passed successfully" in result.summary
 
     @pytest.mark.asyncio
     async def test_summary_for_warning(self, validation_agent, sample_agent_context):
         """Test summary message when warnings are present."""
-        with patch.object(
-            validation_agent.tools[0], "execute", new_callable=AsyncMock
-        ) as mock_tool:
-            mock_tool.return_value = ToolResult(
+        with (
+            patch.object(
+                validation_agent.tools[0], "execute", new_callable=AsyncMock
+            ) as mock_tool1,
+            patch.object(
+                validation_agent.tools[1], "execute", new_callable=AsyncMock
+            ) as mock_tool2,
+            patch.object(
+                validation_agent.tools[2], "execute", new_callable=AsyncMock
+            ) as mock_tool3,
+        ):
+            # First tool returns WARNING, others return PASS
+            mock_tool1.return_value = ToolResult(
                 status=ToolStatus.WARNING,
                 field_name="gap_insurance_premium",
                 message="Statistical outlier",
+                tool_name="TestTool",
+            )
+            mock_tool2.return_value = ToolResult(
+                status=ToolStatus.PASS,
+                field_name="gap_insurance_premium",
+                message="Valid",
+                tool_name="TestTool",
+            )
+            mock_tool3.return_value = ToolResult(
+                status=ToolStatus.PASS,
+                field_name="gap_insurance_premium",
+                message="Valid",
                 tool_name="TestTool",
             )
 
@@ -306,10 +390,31 @@ class TestSummaryGeneration:
     @pytest.mark.asyncio
     async def test_summary_includes_field_count(self, validation_agent, sample_agent_context):
         """Test that summary includes count of validated fields."""
-        with patch.object(
-            validation_agent.tools[0], "execute", new_callable=AsyncMock
-        ) as mock_tool:
-            mock_tool.return_value = ToolResult(
+        with (
+            patch.object(
+                validation_agent.tools[0], "execute", new_callable=AsyncMock
+            ) as mock_tool1,
+            patch.object(
+                validation_agent.tools[1], "execute", new_callable=AsyncMock
+            ) as mock_tool2,
+            patch.object(
+                validation_agent.tools[2], "execute", new_callable=AsyncMock
+            ) as mock_tool3,
+        ):
+            # All tools return PASS
+            mock_tool1.return_value = ToolResult(
+                status=ToolStatus.PASS,
+                field_name="gap_insurance_premium",
+                message="Valid",
+                tool_name="TestTool",
+            )
+            mock_tool2.return_value = ToolResult(
+                status=ToolStatus.PASS,
+                field_name="gap_insurance_premium",
+                message="Valid",
+                tool_name="TestTool",
+            )
+            mock_tool3.return_value = ToolResult(
                 status=ToolStatus.PASS,
                 field_name="gap_insurance_premium",
                 message="Valid",
@@ -318,8 +423,8 @@ class TestSummaryGeneration:
 
             result = await validation_agent.execute(sample_agent_context)
 
-            # Should mention 3 fields
-            assert "3" in result.summary or "three" in result.summary.lower()
+            # Should mention 9 checks (3 fields × 3 tools)
+            assert "9" in result.summary or "nine" in result.summary.lower()
 
 
 class TestAgentResultFormat:

@@ -189,7 +189,7 @@ class Agent(ABC):
         """
         Compute overall validation status from field results.
 
-        Priority: fail > warning > pass
+        Priority: fail/error > warning > pass
 
         Args:
             field_results: List of tool results
@@ -199,8 +199,14 @@ class Agent(ABC):
         """
         statuses = [result.get("status") for result in field_results]
 
-        # Priority: fail > warning > pass
-        if "fail" in statuses or ToolStatus.FAIL.value in statuses:
+        # Priority: fail/error > warning > pass
+        # Treat ERROR as FAIL since it indicates a validation tool failure
+        if (
+            "fail" in statuses
+            or ToolStatus.FAIL.value in statuses
+            or "error" in statuses
+            or ToolStatus.ERROR.value in statuses
+        ):
             return "fail"
         elif "warning" in statuses or ToolStatus.WARNING.value in statuses:
             return "warning"

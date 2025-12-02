@@ -69,7 +69,7 @@ export function Header({ title = 'Contract Refund System', onLogout }: HeaderPro
   };
 
   return (
-    <header className="h-16 w-full bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-6 transition-colors">
+    <header role="banner" className="h-16 w-full bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between px-6 transition-colors">
       {/* Page Title */}
       <div>
         <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">{title}</h1>
