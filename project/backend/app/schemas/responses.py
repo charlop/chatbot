@@ -5,7 +5,7 @@ Handles response serialization and formatting.
 
 from __future__ import annotations
 
-from typing import List, Any
+from typing import List, Any, Literal
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, date
 from decimal import Decimal
@@ -108,6 +108,31 @@ class ExtractedFieldResponse(BaseModel):
     )
 
 
+class FieldValidationResponse(BaseModel):
+    """
+    Response schema for field validation result.
+    Contains validation status, reasoning, and tool name.
+    """
+
+    field_name: str = Field(..., description="Field name that was validated")
+    status: Literal["pass", "warning", "fail"] = Field(..., description="Validation status")
+    message: str = Field(..., description="Human-readable validation message")
+    tool_name: str | None = Field(None, description="Name of the validation tool")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "field_name": "gap_insurance_premium",
+                    "status": "pass",
+                    "message": "Premium $500.00 is within expected range",
+                    "tool_name": "rule_validator",
+                }
+            ]
+        }
+    )
+
+
 class ExtractionResponse(BaseModel):
     """
     Response schema for extraction data.
@@ -136,6 +161,11 @@ class ExtractionResponse(BaseModel):
     extracted_by: UUID | None = None
     approved_at: datetime | None = None
     approved_by: UUID | None = None
+
+    # Validation results (Phase 1: Validation Agent)
+    validation_status: Literal["pass", "warning", "fail"] | None = None
+    validation_results: List[FieldValidationResponse] | None = None
+    validated_at: datetime | None = None
 
     # TODO: Add corrections in Day 7
     # corrections: List["CorrectionResponse"] | None = None
@@ -188,6 +218,17 @@ class ExtractionResponse(BaseModel):
             extracted_by=extraction.extracted_by,
             approved_at=extraction.approved_at,
             approved_by=extraction.approved_by,
+            # Validation results
+            validation_status=extraction.validation_status,
+            validation_results=(
+                [
+                    FieldValidationResponse(**result)
+                    for result in extraction.validation_results.get("field_results", [])
+                ]
+                if extraction.validation_results
+                else None
+            ),
+            validated_at=extraction.validated_at,
             # corrections=None,  # Will be populated separately if needed (Day 7)
         )
 
