@@ -5,7 +5,6 @@ import {
   getRecentSearches,
   clearRecentSearches,
   RecentSearch,
-  formatRecentSearch,
 } from '@/lib/utils/recentSearches';
 
 const DEFAULT_MAX_ITEMS = 5;

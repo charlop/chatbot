@@ -146,7 +146,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({
             onChange={(newValue) => handleFieldChange('gap_premium', newValue)}
             onViewInDocument={
               onViewInDocument && extraction.gap_premium_source
-                ? () => onViewInDocument(extraction.gap_premium_source)
+                ? () => onViewInDocument(extraction.gap_premium_source!)
                 : undefined
             }
             {...getFieldValidation('gap_insurance_premium')}
@@ -167,7 +167,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({
             onChange={(newValue) => handleFieldChange('refund_method', newValue)}
             onViewInDocument={
               onViewInDocument && extraction.refund_method_source
-                ? () => onViewInDocument(extraction.refund_method_source)
+                ? () => onViewInDocument(extraction.refund_method_source!)
                 : undefined
             }
             {...getFieldValidation('refund_calculation_method')}
@@ -188,7 +188,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({
             onChange={(newValue) => handleFieldChange('cancellation_fee', newValue)}
             onViewInDocument={
               onViewInDocument && extraction.cancellation_fee_source
-                ? () => onViewInDocument(extraction.cancellation_fee_source)
+                ? () => onViewInDocument(extraction.cancellation_fee_source!)
                 : undefined
             }
             {...getFieldValidation('cancellation_fee')}
