@@ -4,6 +4,7 @@ Tests model creation, relationships, and constraints.
 """
 
 import pytest
+import uuid
 from datetime import datetime, date
 from decimal import Decimal
 from uuid import UUID
@@ -272,34 +273,39 @@ class TestUserModel:
 
     async def test_create_user(self, db_session: AsyncSession):
         """Test creating a user."""
+        unique_id = str(uuid.uuid4())[:8]
         user = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|12345",
-            email="test@example.com",
-            username="testuser",
+            auth_provider_user_id=f"auth0|{unique_id}",
+            email=f"test-{unique_id}@example.com",
+            username=f"testuser-{unique_id}",
             role="user",
         )
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
 
-        assert user.email == "test@example.com"
+        assert user.email == f"test-{unique_id}@example.com"
         assert user.role == "user"
         assert user.is_active is True
         assert user.created_at is not None
 
     async def test_user_unique_email(self, db_session: AsyncSession):
         """Test that email must be unique."""
+        unique_id1 = str(uuid.uuid4())[:8]
+        unique_id2 = str(uuid.uuid4())[:8]
+        duplicate_email = f"duplicate-{unique_id1}@example.com"
+
         user1 = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|111",
-            email="duplicate@example.com",
+            auth_provider_user_id=f"auth0|{unique_id1}",
+            email=duplicate_email,
             role="user",
         )
         user2 = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|222",
-            email="duplicate@example.com",  # Same email
+            auth_provider_user_id=f"auth0|{unique_id2}",
+            email=duplicate_email,  # Same email
             role="user",
         )
 

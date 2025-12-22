@@ -4,6 +4,7 @@ Tests user-specific CRUD operations and queries.
 """
 
 import pytest
+import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.user_repository import UserRepository
 from app.models.database.user import User
@@ -17,18 +18,19 @@ class TestUserRepository:
     async def test_create_user(self, db_session: AsyncSession):
         """Test creating a new user."""
         repo = UserRepository(db_session)
+        unique_id = str(uuid.uuid4())[:8]
 
         user = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|test-create-001",
-            email="test.create@example.com",
+            auth_provider_user_id=f"auth0|test-create-{unique_id}",
+            email=f"test.create-{unique_id}@example.com",
             first_name="Test",
             last_name="User",
             role="user",
         )
 
         created = await repo.create(user)
-        assert created.email == "test.create@example.com"
+        assert created.email == f"test.create-{unique_id}@example.com"
         assert created.role == "user"
         assert created.is_active is True
         assert created.user_id is not None
@@ -86,11 +88,12 @@ class TestUserRepository:
     async def test_get_all_active(self, db_session: AsyncSession):
         """Test retrieving only active users."""
         repo = UserRepository(db_session)
+        unique_id = str(uuid.uuid4())[:8]
 
         # Create active user
         active_user = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|active-001",
+            auth_provider_user_id=f"auth0|active-{unique_id}",
             email="active@example.com",
             role="user",
             is_active=True,
@@ -100,7 +103,7 @@ class TestUserRepository:
         # Create inactive user
         inactive_user = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|inactive-001",
+            auth_provider_user_id=f"auth0|inactive-{unique_id}",
             email="inactive@example.com",
             role="user",
             is_active=False,
@@ -116,11 +119,12 @@ class TestUserRepository:
     async def test_get_by_role(self, db_session: AsyncSession):
         """Test retrieving users by role."""
         repo = UserRepository(db_session)
+        unique_id = str(uuid.uuid4())[:8]
 
         # Create admin user
         admin = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|admin-001",
+            auth_provider_user_id=f"auth0|admin-{unique_id}",
             email="admin@example.com",
             role="admin",
         )
@@ -129,7 +133,7 @@ class TestUserRepository:
         # Create regular user
         user = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|user-002",
+            auth_provider_user_id=f"auth0|user-{unique_id}",
             email="regular@example.com",
             role="user",
         )
@@ -169,11 +173,12 @@ class TestUserRepository:
     async def test_reactivate(self, db_session: AsyncSession):
         """Test reactivating a soft-deleted user."""
         repo = UserRepository(db_session)
+        unique_id = str(uuid.uuid4())[:8]
 
         # Create inactive user
         user = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|reactivate-001",
+            auth_provider_user_id=f"auth0|reactivate-{unique_id}",
             email="reactivate@example.com",
             role="user",
             is_active=False,
@@ -218,9 +223,10 @@ class TestUserRepository:
         assert exists is False
 
         # Should return True for another user's email
+        unique_id = str(uuid.uuid4())[:8]
         other_user = User(
             auth_provider="auth0",
-            auth_provider_user_id="auth0|other-001",
+            auth_provider_user_id=f"auth0|other-{unique_id}",
             email="other@example.com",
             role="user",
         )
@@ -232,13 +238,14 @@ class TestUserRepository:
     async def test_get_all_with_pagination(self, db_session: AsyncSession):
         """Test get_all with pagination."""
         repo = UserRepository(db_session)
+        unique_base = str(uuid.uuid4())[:8]
 
         # Create multiple users
         for i in range(10):
             user = User(
                 auth_provider="auth0",
-                auth_provider_user_id=f"auth0|paginate-{i:03d}",
-                email=f"user{i:03d}@example.com",
+                auth_provider_user_id=f"auth0|paginate-{unique_base}-{i:03d}",
+                email=f"user{unique_base}-{i:03d}@example.com",
                 role="user",
             )
             await repo.create(user)

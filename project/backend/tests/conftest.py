@@ -67,6 +67,12 @@ async def test_db_engine() -> AsyncGenerator[AsyncEngine, None]:
 
     # Drop all tables after tests
     async with engine.begin() as conn:
+        from sqlalchemy import text
+
+        # Drop all views first to avoid dependency issues
+        await conn.execute(text("DROP VIEW IF EXISTS v_user_activity CASCADE"))
+
+        # Then drop all tables
         await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
@@ -103,15 +109,19 @@ async def db_session(test_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession
 
 
 @pytest.fixture
-async def test_user(db_session: AsyncSession):
-    """Create a test user."""
+async def test_user(db_session: AsyncSession, request):
+    """Create a test user with unique ID per test."""
     from app.models.database.user import User
+    import uuid
+
+    # Generate unique ID per test to avoid duplicate key violations
+    unique_suffix = str(uuid.uuid4())[:8]
 
     user = User(
         auth_provider="test_provider",
-        auth_provider_user_id="test_user_123",
-        email="testuser@example.com",
-        username="testuser",
+        auth_provider_user_id=f"test_user_{unique_suffix}",
+        email=f"testuser_{unique_suffix}@example.com",
+        username=f"testuser_{unique_suffix}",
         role="user",
     )
     db_session.add(user)
