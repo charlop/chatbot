@@ -8,6 +8,13 @@ export interface FieldValidation {
   status: 'pass' | 'warning' | 'fail';
   message: string;
   tool_name?: string;
+  // State context
+  state_context?: {
+    jurisdiction?: string; // e.g., "US-CA"
+    applicable_states?: string[]; // States where this validation applies
+    state_specific_rule?: string; // Description of state rule applied
+    multi_state_note?: string; // Note about multi-state conflicts
+  };
 }
 
 /**
@@ -32,6 +39,18 @@ export interface Extraction {
   validation_status?: 'pass' | 'warning' | 'fail';
   validation_results?: FieldValidation[];
   validated_at?: string;
+  // State validation tracking
+  applied_jurisdiction_id?: string; // e.g., "US-CA"
+  jurisdiction_applied_at?: string;
+  state_validation_results?: {
+    jurisdiction_id?: string;
+    field_results?: any[];
+    multi_state_conflicts?: Array<{
+      jurisdiction: string;
+      field: string;
+      conflict: string;
+    }>;
+  };
 }
 
 /**

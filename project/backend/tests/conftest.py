@@ -93,11 +93,13 @@ async def db_session(test_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession
     )
 
     async with TestSessionLocal() as session:
-        try:
-            yield session
-            await session.rollback()  # Rollback any changes
-        finally:
-            await session.close()
+        # Start a transaction
+        transaction = await session.begin()
+
+        yield session
+
+        # Always rollback to ensure test isolation
+        await transaction.rollback()
 
 
 @pytest.fixture
@@ -113,27 +115,30 @@ async def test_user(db_session: AsyncSession):
         role="user",
     )
     db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
+    await db_session.flush()  # Flush to get IDs without committing
     return user
 
 
 @pytest.fixture
-async def test_contract(db_session: AsyncSession):
-    """Create a test contract template."""
+async def test_contract(db_session: AsyncSession, request):
+    """Create a test contract template with unique ID per test."""
     from app.models.database.contract import Contract
+    import uuid
+
+    # Use test name + uuid to ensure uniqueness
+    test_name = request.node.name
+    unique_id = f"TEST-{test_name[:20]}-{str(uuid.uuid4())[:8]}"
 
     contract = Contract(
-        contract_id="TEST-CONTRACT-001",
+        contract_id=unique_id,
         s3_bucket="test-contracts",
-        s3_key="contracts/TEST-CONTRACT-001.pdf",
+        s3_key=f"contracts/{unique_id}.pdf",
         contract_type="GAP",
         template_version="1.0",
         is_active=True,
     )
     db_session.add(contract)
-    await db_session.commit()
-    await db_session.refresh(contract)
+    await db_session.flush()  # Flush to get IDs without committing
     return contract
 
 
@@ -158,8 +163,7 @@ async def test_extraction(db_session: AsyncSession, test_contract):
         status="pending",
     )
     db_session.add(extraction)
-    await db_session.commit()
-    await db_session.refresh(extraction)
+    await db_session.flush()  # Flush to get IDs without committing
     return extraction
 
 

@@ -25,6 +25,7 @@ from app.utils.cache import cache_get, cache_set, cache_delete, cache_delete_pat
 from app.config import settings
 from app.agents.validation_agent import ValidationAgent
 from app.agents.base import AgentContext
+from app.repositories.state_rule_repository import StateRuleRepository
 
 logger = logging.getLogger(__name__)
 
@@ -293,6 +294,36 @@ class ExtractionService:
             # Don't fail the extraction if validation fails - continue with extraction creation
             validation_result = None
 
+        # ADDED: Determine which jurisdiction was applied
+        applied_jurisdiction_id = None
+        jurisdiction_applied_at = None
+        state_validation_results = None
+
+        try:
+            rule_repo = StateRuleRepository(self.db)
+            jurisdictions = await rule_repo.get_jurisdictions_for_contract(contract_id)
+
+            if jurisdictions:
+                # Get primary jurisdiction
+                primary = next((j for j in jurisdictions if j.is_primary), jurisdictions[0])
+                applied_jurisdiction_id = primary.jurisdiction_id
+                jurisdiction_applied_at = datetime.utcnow()
+
+                # Create state validation results
+                state_validation_results = {
+                    "jurisdiction_id": applied_jurisdiction_id,
+                    "field_results": validation_result.field_results if validation_result else [],
+                    "jurisdictions_checked": len(jurisdictions),
+                }
+
+                logger.info(
+                    f"Applied jurisdiction {applied_jurisdiction_id} for contract {contract_id} "
+                    f"({len(jurisdictions)} jurisdiction(s) total)"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to determine jurisdiction for contract {contract_id}: {e}")
+            # Continue without jurisdiction tracking
+
         # Map ExtractionResult to Extraction model
         extraction = Extraction(
             contract_id=contract_id,
@@ -364,6 +395,10 @@ class ExtractionService:
                 {"field_results": validation_result.field_results} if validation_result else None
             ),
             validated_at=datetime.utcnow() if validation_result else None,
+            # State tracking (Phase 2: State-Specific Validation)
+            applied_jurisdiction_id=applied_jurisdiction_id,
+            jurisdiction_applied_at=jurisdiction_applied_at,
+            state_validation_results=state_validation_results,
         )
 
         # Persist to database

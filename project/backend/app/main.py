@@ -13,7 +13,7 @@ from app.database import close_database, check_database_health
 from app.schemas.responses import HealthResponse
 from app.middleware.error_handling import error_handling_middleware
 from app.middleware.logging import request_logging_middleware
-from app.api.v1 import contracts, extractions, audit, chat, admin
+from app.api.v1 import contracts, extractions, audit, chat, admin, state_rules
 from app.utils.cache import get_cache_stats, close_redis, get_redis
 
 # Configure logging
@@ -188,6 +188,7 @@ app.include_router(extractions.router, prefix=settings.api_v1_prefix, tags=["Ext
 app.include_router(audit.router, prefix=settings.api_v1_prefix, tags=["Audit"])
 app.include_router(chat.router, prefix=settings.api_v1_prefix, tags=["Chat"])
 app.include_router(admin.router, prefix=settings.api_v1_prefix, tags=["Admin"])
+app.include_router(state_rules.router, prefix=settings.api_v1_prefix, tags=["State Rules"])
 
 
 if __name__ == "__main__":

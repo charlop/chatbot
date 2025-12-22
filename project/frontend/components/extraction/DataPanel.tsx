@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { DataCard } from './DataCard';
 import { SubmitModal } from './SubmitModal';
 import { AuditTrail } from '@/components/audit/AuditTrail';
+import { ContractMetadata } from '@/components/contract/ContractMetadata';
 import type { Extraction, FieldCorrection } from '@/lib/api/extractions';
 import type { ExtractedData } from '@/lib/api/contracts';
 
@@ -30,6 +31,18 @@ export interface DataPanelProps {
    * Optional CSS class
    */
   className?: string;
+
+  /**
+   * Contract metadata (optional)
+   */
+  contractMetadata?: {
+    contractId: string;
+    accountNumber?: string;
+    state?: string;
+    applicableStates?: string[];
+    contractType?: string;
+    templateVersion?: string;
+  };
 }
 
 // Field name mapping (frontend → backend)
@@ -49,6 +62,7 @@ export const DataPanel: React.FC<DataPanelProps> = ({
   onSubmit,
   onViewInDocument,
   className = '',
+  contractMetadata,
 }) => {
   const [corrections, setCorrections] = useState<Map<string, string>>(new Map());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -123,6 +137,18 @@ export const DataPanel: React.FC<DataPanelProps> = ({
         className={`w-[464px] h-full bg-neutral-50 border-l border-neutral-200 overflow-y-auto ${className}`}
       >
         <div className="p-6 space-y-4">
+          {/* Contract Metadata Section */}
+          {contractMetadata && (
+            <ContractMetadata
+              contractId={contractMetadata.contractId}
+              accountNumber={contractMetadata.accountNumber}
+              state={contractMetadata.state}
+              applicableStates={contractMetadata.applicableStates}
+              contractType={contractMetadata.contractType}
+              templateVersion={contractMetadata.templateVersion}
+            />
+          )}
+
           {/* Header */}
           <div className="mb-6">
             <h2 className="text-lg font-bold text-neutral-900">Extracted Data</h2>

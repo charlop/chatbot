@@ -4,7 +4,8 @@ Handles request validation and serialization.
 """
 
 import re
-from typing import List
+from typing import List, Dict, Any
+from datetime import date
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from uuid import UUID
 
@@ -428,4 +429,66 @@ class UserUpdateRequest(BaseModel):
                 },
             ]
         },
+    )
+
+
+# ==========================================
+# State Validation Rule Schemas
+# ==========================================
+
+
+class StateRuleCreateRequest(BaseModel):
+    """
+    Request schema for creating a state validation rule.
+    """
+
+    jurisdiction_id: str = Field(..., description="Jurisdiction ID (e.g., US-CA, US-NY)")
+    rule_category: str = Field(
+        ...,
+        description="Rule category (gap_premium, cancellation_fee, refund_method)",
+    )
+    rule_config: Dict[str, Any] = Field(..., description="JSONB rule configuration")
+    effective_date: date = Field(..., description="When rule becomes effective")
+    rule_description: str | None = Field(None, description="Optional rule description")
+
+    @field_validator("rule_category")
+    @classmethod
+    def validate_rule_category(cls, v: str) -> str:
+        """Validate rule category is one of the allowed values."""
+        allowed = {"gap_premium", "cancellation_fee", "refund_method"}
+        if v not in allowed:
+            raise ValueError(f"Rule category must be one of: {', '.join(allowed)}")
+        return v
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "jurisdiction_id": "US-CA",
+                "rule_category": "gap_premium",
+                "rule_config": {"min": 200, "max": 1500, "strict": True},
+                "effective_date": "2025-01-01",
+                "rule_description": "California GAP premium limits",
+            }
+        }
+    )
+
+
+class StateRuleUpdateRequest(BaseModel):
+    """
+    Request schema for updating a state validation rule.
+    Creates a new version of the rule.
+    """
+
+    rule_config: Dict[str, Any] = Field(..., description="New rule configuration")
+    effective_date: date = Field(..., description="When new rule becomes effective")
+    rule_description: str | None = Field(None, description="Updated rule description")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "rule_config": {"min": 250, "max": 1400, "strict": True},
+                "effective_date": "2025-06-01",
+                "rule_description": "Updated California GAP premium limits",
+            }
+        }
     )

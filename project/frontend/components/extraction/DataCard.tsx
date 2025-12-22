@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { ValidationBadge } from './ValidationBadge';
+import { StateValidationNote } from './StateValidationNote';
 
 export interface DataCardProps {
   /**
@@ -57,6 +58,19 @@ export interface DataCardProps {
    * Validation reason (Phase 1: Validation Agent)
    */
   validationReason?: string;
+
+  /**
+   * State context for validation (Phase 2: State-Specific Validation)
+   */
+  stateContext?: {
+    jurisdiction?: string;
+    message?: string;
+    conflicts?: Array<{
+      jurisdiction: string;
+      field: string;
+      conflict: string;
+    }>;
+  };
 }
 
 /**
@@ -74,6 +88,7 @@ export const DataCard: React.FC<DataCardProps> = ({
   className = '',
   validationStatus,
   validationReason,
+  stateContext,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -192,6 +207,15 @@ export const DataCard: React.FC<DataCardProps> = ({
           </svg>
           <span className="text-xs font-medium text-primary">Edited</span>
         </div>
+      )}
+
+      {/* State Validation Note */}
+      {stateContext && (
+        <StateValidationNote
+          jurisdiction={stateContext.jurisdiction}
+          message={stateContext.message}
+          conflicts={stateContext.conflicts}
+        />
       )}
 
       {/* Source and Actions */}

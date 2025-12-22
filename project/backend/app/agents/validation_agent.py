@@ -3,13 +3,15 @@ Validation Agent - Orchestrates validation tools on extracted data.
 
 The ValidationAgent runs multiple validation tools on each extracted field
 and aggregates the results to produce an overall validation status.
+
+UPDATED: Now uses StateAwareRuleValidator instead of hardcoded RuleValidator.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.base import Agent, AgentContext, AgentResult, ToolContext
 from app.agents.tools.validators import (
-    RuleValidator,
+    StateAwareRuleValidator,
     HistoricalValidator,
     ConsistencyValidator,
 )
@@ -31,11 +33,11 @@ class ValidationAgent(Agent):
         Initialize the validation agent.
 
         Args:
-            db: Database session for tools that need historical data
+            db: Database session for tools that need historical data and state rules
         """
         self.db = db
         self.tools = [
-            RuleValidator(),
+            StateAwareRuleValidator(db),  # CHANGED: Now requires db, replaces RuleValidator
             HistoricalValidator(db),
             ConsistencyValidator(),
         ]

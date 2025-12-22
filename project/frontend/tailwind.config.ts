@@ -60,6 +60,18 @@ const config: Config = {
           800: '#991b1b',
           900: '#7f1d1d',
         },
+        state: {
+          50: '#e3fffa',   // Light teal background
+          100: '#b3fff0',
+          200: '#5de2cc',  // Light teal accent
+          300: '#1c988a',  // Seafoam
+          400: '#00857f',  // Primary teal
+          500: '#006d68',  // Dark teal
+          600: '#005650',
+          700: '#004038',
+          800: '#002a20',
+          900: '#001510',
+        },
         neutral: {
           50: '#fafafa',
           100: '#f5f5f5',

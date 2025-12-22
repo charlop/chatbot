@@ -5,7 +5,7 @@ Handles response serialization and formatting.
 
 from __future__ import annotations
 
-from typing import List, Any, Literal
+from typing import List, Any, Literal, Dict
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, date
 from decimal import Decimal
@@ -495,3 +495,40 @@ class UserListResponse(BaseModel):
             ]
         }
     )
+
+
+# ==========================================
+# State Validation Rule Schemas
+# ==========================================
+
+
+class JurisdictionResponse(BaseModel):
+    """
+    Response schema for jurisdiction data.
+    """
+
+    jurisdiction_id: str
+    jurisdiction_name: str
+    country_code: str
+    state_code: str | None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StateRuleResponse(BaseModel):
+    """
+    Response schema for state validation rule.
+    """
+
+    rule_id: UUID
+    jurisdiction_id: str
+    rule_category: str
+    rule_config: Dict[str, Any]
+    effective_date: date
+    expiration_date: date | None
+    is_active: bool
+    rule_description: str | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

@@ -6,11 +6,15 @@ and cross-field consistency checks.
 """
 
 from app.agents.tools.validators.rule_validator import RuleValidator
+from app.agents.tools.validators.state_aware_rule_validator import (
+    StateAwareRuleValidator,
+)
 from app.agents.tools.validators.historical_validator import HistoricalValidator
 from app.agents.tools.validators.consistency_validator import ConsistencyValidator
 
 __all__ = [
     "RuleValidator",
+    "StateAwareRuleValidator",
     "HistoricalValidator",
     "ConsistencyValidator",
 ]
