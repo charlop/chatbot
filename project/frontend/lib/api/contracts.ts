@@ -26,6 +26,10 @@ export interface ExtractedData {
   extractedBy?: string;
   approvedAt?: string;
   approvedBy?: string;
+  // State information
+  state?: string;
+  applicableStates?: string[];
+  appliedJurisdiction?: string; // Which jurisdiction rules were applied (e.g., "US-CA")
 }
 
 export interface AuditInfo {
@@ -58,6 +62,11 @@ export interface ContractTemplate {
   effectiveDate?: string; // When this version became active
   deprecatedDate?: string; // When this version was superseded
   isActive?: boolean; // Whether this template version is currently active
+
+  // State/Jurisdiction fields
+  state?: string; // Primary state code (e.g., "CA", "NY")
+  applicableStates?: string[]; // All applicable states for multi-state contracts
+  stateRequirements?: string; // Optional state-specific requirements note
 
   // Extracted data from template
   extractedData?: ExtractedData;
