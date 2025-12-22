@@ -144,6 +144,102 @@ CREATE TRIGGER update_contracts_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================================================
+-- JURISDICTIONS (STATE-SPECIFIC VALIDATION)
+-- =============================================================================
+
+-- Jurisdictions table: States and regions with regulatory authority
+-- Supports state-specific validation rules for contract terms
+CREATE TABLE jurisdictions (
+    jurisdiction_id VARCHAR(10) PRIMARY KEY,  -- 'US-CA', 'US-TX', 'US-NY', 'US-FEDERAL'
+    jurisdiction_name VARCHAR(100) NOT NULL,  -- 'California', 'Texas', 'Federal (Default)'
+    country_code VARCHAR(2) NOT NULL,         -- 'US'
+    state_code VARCHAR(2),                    -- 'CA', 'TX', NULL for federal
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for jurisdiction lookups
+CREATE INDEX idx_jurisdictions_state_code ON jurisdictions(state_code);
+CREATE INDEX idx_jurisdictions_is_active ON jurisdictions(is_active);
+
+-- Trigger to update updated_at timestamp
+CREATE TRIGGER update_jurisdictions_updated_at
+    BEFORE UPDATE ON jurisdictions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Comments
+COMMENT ON TABLE jurisdictions IS 'Master list of US states and jurisdictions with regulatory authority';
+COMMENT ON COLUMN jurisdictions.jurisdiction_id IS 'Unique identifier (e.g., US-CA for California)';
+COMMENT ON COLUMN jurisdictions.state_code IS 'Two-letter state code (NULL for federal default)';
+
+-- Contract-Jurisdiction Mappings table: Many-to-many relationship
+-- Supports multi-state contracts with primary jurisdiction designation
+CREATE TABLE contract_jurisdictions (
+    contract_jurisdiction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    contract_id VARCHAR(100) NOT NULL REFERENCES contracts(contract_id) ON DELETE CASCADE,
+    jurisdiction_id VARCHAR(10) NOT NULL REFERENCES jurisdictions(jurisdiction_id),
+    is_primary BOOLEAN DEFAULT false,         -- Primary jurisdiction for validation
+    effective_date DATE,                      -- When this jurisdiction mapping became active
+    expiration_date DATE,                     -- When superseded (NULL if current)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT unique_contract_jurisdiction UNIQUE(contract_id, jurisdiction_id, effective_date)
+);
+
+-- Indexes for contract-jurisdiction mappings
+CREATE INDEX idx_contract_jurisdictions_contract ON contract_jurisdictions(contract_id);
+CREATE INDEX idx_contract_jurisdictions_jurisdiction ON contract_jurisdictions(jurisdiction_id);
+CREATE INDEX idx_contract_jurisdictions_effective ON contract_jurisdictions(effective_date);
+
+-- Comments
+COMMENT ON TABLE contract_jurisdictions IS 'Many-to-many mapping supporting multi-state contracts';
+COMMENT ON COLUMN contract_jurisdictions.is_primary IS 'Exactly one jurisdiction per contract should be primary';
+
+-- State Validation Rules table: Database-driven rules with JSONB configuration
+-- Supports rule versioning with effective dates
+CREATE TABLE state_validation_rules (
+    rule_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    jurisdiction_id VARCHAR(10) NOT NULL REFERENCES jurisdictions(jurisdiction_id),
+    rule_category VARCHAR(50) NOT NULL,  -- 'gap_premium', 'cancellation_fee', 'refund_method'
+
+    -- Flexible JSONB configuration
+    rule_config JSONB NOT NULL,
+
+    -- Rule versioning and lifecycle
+    effective_date DATE NOT NULL,             -- When this rule version becomes active
+    expiration_date DATE,                     -- When superseded (NULL if current)
+    is_active BOOLEAN DEFAULT true,
+
+    -- Metadata
+    rule_description TEXT,
+    created_by UUID REFERENCES users(user_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT check_rule_category CHECK (rule_category IN (
+        'gap_premium', 'cancellation_fee', 'refund_method'
+    ))
+);
+
+-- Indexes for state validation rules
+CREATE INDEX idx_state_rules_jurisdiction ON state_validation_rules(jurisdiction_id);
+CREATE INDEX idx_state_rules_category ON state_validation_rules(rule_category);
+CREATE INDEX idx_state_rules_effective ON state_validation_rules(effective_date);
+CREATE INDEX idx_state_rules_active ON state_validation_rules(is_active, expiration_date);
+
+-- Trigger to update updated_at timestamp
+CREATE TRIGGER update_state_rules_updated_at
+    BEFORE UPDATE ON state_validation_rules
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Comments
+COMMENT ON TABLE state_validation_rules IS 'State-specific validation rules with versioning support';
+COMMENT ON COLUMN state_validation_rules.rule_config IS 'JSONB configuration for flexible rule definitions (e.g., {min: 200, max: 1500, strict: true})';
+
+-- =============================================================================
 -- ACCOUNT TEMPLATE MAPPINGS
 -- =============================================================================
 
@@ -228,6 +324,11 @@ CREATE TABLE extractions (
     validation_results JSONB,
     validated_at TIMESTAMP WITH TIME ZONE,
 
+    -- State validation tracking (Phase 2: State-Specific Validation)
+    applied_jurisdiction_id VARCHAR(10) REFERENCES jurisdictions(jurisdiction_id),
+    jurisdiction_applied_at TIMESTAMP WITH TIME ZONE,
+    state_validation_results JSONB,
+
     -- Ensure only one extraction per contract
     CONSTRAINT unique_contract_extraction UNIQUE(contract_id)
 );
@@ -238,6 +339,7 @@ CREATE INDEX idx_extractions_status ON extractions(status);
 CREATE INDEX idx_extractions_extracted_at ON extractions(extracted_at);
 CREATE INDEX idx_extractions_extracted_by ON extractions(extracted_by);
 CREATE INDEX idx_extractions_llm_provider ON extractions(llm_provider);
+CREATE INDEX idx_extractions_jurisdiction ON extractions(applied_jurisdiction_id);
 
 -- Trigger to update updated_at timestamp (add updated_at column first)
 ALTER TABLE extractions ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
@@ -297,7 +399,12 @@ CREATE TABLE audit_events (
         'user_deleted',
         'account_lookup',
         'template_view',
-        'mapping_cached'
+        'mapping_cached',
+        'state_rule_applied',
+        'state_validation_failed',
+        'multi_state_detected',
+        'state_rule_created',
+        'state_rule_updated'
     )),
     contract_id VARCHAR(100) REFERENCES contracts(contract_id),
     extraction_id UUID REFERENCES extractions(extraction_id),
@@ -576,6 +683,9 @@ COMMENT ON COLUMN account_template_mappings.source IS 'Source of mapping: extern
 COMMENT ON COLUMN account_template_mappings.cached_at IS 'When mapping was cached from external source';
 COMMENT ON COLUMN extractions.gap_premium_confidence IS 'Confidence score 0-100 for GAP insurance premium extraction';
 COMMENT ON COLUMN extractions.llm_provider IS 'LLM provider used: openai, anthropic, or bedrock';
+COMMENT ON COLUMN extractions.applied_jurisdiction_id IS 'Primary jurisdiction whose rules were applied during validation';
+COMMENT ON COLUMN extractions.jurisdiction_applied_at IS 'When jurisdiction rules were applied';
+COMMENT ON COLUMN extractions.state_validation_results IS 'Detailed state validation context and multi-state conflicts';
 COMMENT ON COLUMN audit_events.event_data IS 'Flexible JSONB field for event-specific data (includes account_number for searches)';
 
 -- =============================================================================

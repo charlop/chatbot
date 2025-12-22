@@ -109,6 +109,15 @@ class Extraction(Base):
     validation_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     validated_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
 
+    # State validation tracking (Phase 2: State-Specific Validation)
+    applied_jurisdiction_id: Mapped[str | None] = mapped_column(
+        String(10), ForeignKey("jurisdictions.jurisdiction_id"), nullable=True
+    )
+    jurisdiction_applied_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
+    state_validation_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
     # Auto-updated timestamp
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -162,6 +171,7 @@ class Extraction(Base):
         Index("idx_extractions_extracted_at", "extracted_at"),
         Index("idx_extractions_extracted_by", "extracted_by"),
         Index("idx_extractions_llm_provider", "llm_provider"),
+        Index("idx_extractions_jurisdiction", "applied_jurisdiction_id"),
     )
 
     def __repr__(self) -> str:

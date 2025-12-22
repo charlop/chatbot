@@ -93,6 +93,11 @@ class Contract(Base):
         back_populates="template",
         cascade="all, delete-orphan",
     )
+    jurisdictions = relationship(
+        "ContractJurisdiction",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+    )
 
     # Constraints
     __table_args__ = (
