@@ -20,6 +20,7 @@ class ContractSearchRequest(BaseModel):
     """
     Request schema for contract template search endpoint.
     Supports searching by account number OR template ID (mutually exclusive).
+    Optional policy_id to filter to specific policy when searching by account.
     """
 
     account_number: str | None = Field(
@@ -29,6 +30,10 @@ class ContractSearchRequest(BaseModel):
     contract_id: str | None = Field(
         default=None,
         description="Contract template ID to search for (e.g., GAP-2024-TEMPLATE-001)",
+    )
+    policy_id: str | None = Field(
+        default=None,
+        description="Optional policy ID to filter to specific policy (e.g., DI_F, GAP_O)",
     )
 
     @field_validator("account_number", mode="before")

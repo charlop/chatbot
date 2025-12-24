@@ -16,43 +16,67 @@ class AccountMappingRepository(BaseRepository[AccountTemplateMapping]):
 
     Manages account number to template ID mappings, including cache operations.
     Inherits generic CRUD operations from BaseRepository.
+    MULTI-POLICY SUPPORT: One account can have multiple policies.
     """
 
     def __init__(self, session: AsyncSession):
         """Initialize account mapping repository."""
         super().__init__(AccountTemplateMapping, session)
 
-    async def get_by_account_number(self, account_number: str) -> AccountTemplateMapping | None:
+    async def get_by_account_number(self, account_number: str) -> list[AccountTemplateMapping]:
         """
-        Retrieve a mapping by account number.
+        Retrieve ALL policy mappings for an account number.
 
         Args:
             account_number: The account number to search for
 
         Returns:
+            List of AccountTemplateMapping (empty list if none found)
+        """
+        stmt = (
+            select(AccountTemplateMapping)
+            .where(AccountTemplateMapping.account_number == account_number)
+            .order_by(AccountTemplateMapping.policy_id)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_by_account_and_policy(
+        self, account_number: str, policy_id: str
+    ) -> AccountTemplateMapping | None:
+        """
+        Retrieve a specific policy mapping.
+
+        Args:
+            account_number: The account number
+            policy_id: The policy identifier
+
+        Returns:
             AccountTemplateMapping if found, None otherwise
         """
         stmt = select(AccountTemplateMapping).where(
-            AccountTemplateMapping.account_number == account_number
+            AccountTemplateMapping.account_number == account_number,
+            AccountTemplateMapping.policy_id == policy_id,
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def create_or_update_mapping(
-        self, account_number: str, template_id: str, source: str = "external_api"
+        self, account_number: str, policy_id: str, template_id: str, source: str = "external_api"
     ) -> AccountTemplateMapping:
         """
-        Create a new mapping or update existing one (upsert).
+        Create a new policy mapping or update existing one (upsert).
 
         Args:
             account_number: The account number
+            policy_id: The policy identifier
             template_id: The contract template ID
             source: Source of mapping (external_api, manual, migrated)
 
         Returns:
             Created or updated AccountTemplateMapping
         """
-        existing = await self.get_by_account_number(account_number)
+        existing = await self.get_by_account_and_policy(account_number, policy_id)
 
         if existing:
             # Update existing mapping
@@ -68,10 +92,37 @@ class AccountMappingRepository(BaseRepository[AccountTemplateMapping]):
             # Create new mapping
             mapping = AccountTemplateMapping(
                 account_number=account_number,
+                policy_id=policy_id,
                 contract_template_id=template_id,
                 source=source,
             )
             return await self.create(mapping)
+
+    async def upsert_policies(
+        self, account_number: str, policies: list[tuple[str, str]], source: str = "external_api"
+    ) -> list[AccountTemplateMapping]:
+        """
+        Create or update multiple policy mappings for an account (bulk upsert).
+
+        Args:
+            account_number: The account number
+            policies: List of (policy_id, template_id) tuples
+            source: Source of mappings (external_api, manual, migrated)
+
+        Returns:
+            List of created/updated mappings
+        """
+        mappings = []
+        for policy_id, template_id in policies:
+            mapping = await self.create_or_update_mapping(
+                account_number=account_number,
+                policy_id=policy_id,
+                template_id=template_id,
+                source=source,
+            )
+            mappings.append(mapping)
+
+        return mappings
 
     async def is_cache_fresh(
         self, mapping: AccountTemplateMapping, ttl_seconds: int = 3600
@@ -95,18 +146,51 @@ class AccountMappingRepository(BaseRepository[AccountTemplateMapping]):
 
         return cache_age < ttl_seconds
 
-    async def update_last_validated(self, account_number: str) -> None:
+    async def are_all_caches_fresh(
+        self, mappings: list[AccountTemplateMapping], ttl_seconds: int = 3600
+    ) -> bool:
+        """
+        Check if ALL cached policy mappings are still fresh.
+
+        Args:
+            mappings: List of account mappings to check
+            ttl_seconds: Time-to-live in seconds (default: 3600 = 1 hour)
+
+        Returns:
+            True if all caches are fresh, False if any are stale
+        """
+        if not mappings:
+            return False
+
+        for mapping in mappings:
+            if not await self.is_cache_fresh(mapping, ttl_seconds):
+                return False
+
+        return True
+
+    async def update_last_validated(
+        self, account_number: str, policy_id: str | None = None
+    ) -> None:
         """
         Update the last_validated_at timestamp for a mapping.
 
         Args:
             account_number: The account number to update
+            policy_id: Optional policy ID (if None, updates all policies for account)
         """
-        mapping = await self.get_by_account_number(account_number)
-
-        if mapping:
-            mapping.last_validated_at = datetime.now(UTC)
-            await self.session.commit()
+        if policy_id:
+            # Update specific policy
+            mapping = await self.get_by_account_and_policy(account_number, policy_id)
+            if mapping:
+                mapping.last_validated_at = datetime.now(UTC)
+                await self.session.commit()
+        else:
+            # Update all policies for account
+            mappings = await self.get_by_account_number(account_number)
+            for mapping in mappings:
+                mapping.last_validated_at = datetime.now(UTC)
+            if mappings:
+                await self.session.commit()
 
     async def get_stale_mappings(self, ttl_seconds: int = 3600) -> list[AccountTemplateMapping]:
         """

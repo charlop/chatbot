@@ -86,7 +86,31 @@ export interface ContractTemplate {
 // Alias for backward compatibility
 export type Contract = ContractTemplate;
 
-export interface SearchContractResponse {
+/**
+ * Summary of a single policy within an account (for multi-policy accounts)
+ */
+export interface PolicySummary {
+  policyId: string; // Policy identifier (e.g., "DI_F", "GAP_O")
+  contractId: string; // Contract template ID
+  contractType: string; // Policy type (GAP, VSC, etc.)
+  templateVersion?: string; // Template version
+  isActive?: boolean; // Whether policy is active
+}
+
+/**
+ * Response for account search returning multiple policies
+ */
+export interface MultiPolicyResponse {
+  accountNumber: string; // Account number searched
+  state?: string; // Account-level state/jurisdiction
+  policies: PolicySummary[]; // List of all policies for account
+  totalPolicies: number; // Total number of policies
+}
+
+/**
+ * Response for single contract/policy search
+ */
+export interface SingleContractResponse {
   contractId: string; // Template ID
 
   // S3 Storage (for backend use and debugging)
@@ -112,6 +136,29 @@ export interface SearchContractResponse {
   createdAt: string;
   updatedAt: string;
   lastSyncedAt?: string;
+}
+
+/**
+ * Union type for search responses - can be either multi-policy or single contract
+ */
+export type SearchContractResponse = MultiPolicyResponse | SingleContractResponse;
+
+/**
+ * Type guard to check if response is MultiPolicyResponse
+ */
+export function isMultiPolicyResponse(
+  response: SearchContractResponse
+): response is MultiPolicyResponse {
+  return 'policies' in response && Array.isArray((response as MultiPolicyResponse).policies);
+}
+
+/**
+ * Type guard to check if response is SingleContractResponse
+ */
+export function isSingleContractResponse(
+  response: SearchContractResponse
+): response is SingleContractResponse {
+  return 'contractId' in response && !('policies' in response);
 }
 
 /**

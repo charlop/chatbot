@@ -246,9 +246,11 @@ COMMENT ON COLUMN state_validation_rules.rule_config IS 'JSONB configuration for
 -- Account-Template Mappings table: Maps account numbers to contract template IDs
 -- This table caches lookups from external database for performance
 -- Supports hybrid cache strategy (Redis -> DB -> External API)
+-- MULTI-POLICY SUPPORT: One account can have multiple policies (GAP, VSC, etc.)
 CREATE TABLE account_template_mappings (
     mapping_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_number VARCHAR(100) NOT NULL UNIQUE,
+    account_number VARCHAR(100) NOT NULL,
+    policy_id VARCHAR(50) NOT NULL,
     contract_template_id VARCHAR(100) NOT NULL,
 
     -- Cache metadata
@@ -260,6 +262,9 @@ CREATE TABLE account_template_mappings (
     CONSTRAINT fk_template FOREIGN KEY (contract_template_id)
         REFERENCES contracts(contract_id) ON DELETE CASCADE,
 
+    -- Composite unique constraint: one policy_id per account
+    CONSTRAINT unique_account_policy UNIQUE (account_number, policy_id),
+
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -267,6 +272,8 @@ CREATE TABLE account_template_mappings (
 
 -- Indexes for account-template mapping lookups
 CREATE INDEX idx_account_mappings_account_number ON account_template_mappings(account_number);
+CREATE INDEX idx_account_mappings_policy_id ON account_template_mappings(policy_id);
+CREATE INDEX idx_account_mappings_account_policy ON account_template_mappings(account_number, policy_id);
 CREATE INDEX idx_account_mappings_template_id ON account_template_mappings(contract_template_id);
 CREATE INDEX idx_account_mappings_cached_at ON account_template_mappings(cached_at);
 CREATE INDEX idx_account_mappings_source ON account_template_mappings(source);

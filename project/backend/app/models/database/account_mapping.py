@@ -4,7 +4,7 @@ Account Template Mapping model - Maps account numbers to contract template IDs.
 
 from datetime import datetime
 from uuid import UUID, uuid4
-from sqlalchemy import String, TIMESTAMP, ForeignKey, Index, CheckConstraint, func
+from sqlalchemy import String, TIMESTAMP, ForeignKey, Index, CheckConstraint, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -16,6 +16,7 @@ class AccountTemplateMapping(Base):
 
     This table caches lookups from external database for performance.
     Supports hybrid cache strategy (Redis -> DB -> External API).
+    MULTI-POLICY SUPPORT: One account can have multiple policies.
     """
 
     __tablename__ = "account_template_mappings"
@@ -23,9 +24,14 @@ class AccountTemplateMapping(Base):
     # Primary key
     mapping_id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
 
-    # Unique account number
+    # Account number (no longer unique - allows multiple policies)
     account_number: Mapped[str] = mapped_column(
-        String(100), nullable=False, unique=True, comment="12-digit customer account number"
+        String(100), nullable=False, comment="12-digit customer account number"
+    )
+
+    # Policy identifier (unique within account)
+    policy_id: Mapped[str] = mapped_column(
+        String(50), nullable=False, comment="Policy identifier (e.g., DI_F, GAP_O)"
     )
 
     # Foreign key to contract template
@@ -33,7 +39,7 @@ class AccountTemplateMapping(Base):
         String(100),
         ForeignKey("contracts.contract_id", ondelete="CASCADE"),
         nullable=False,
-        comment="Contract template ID this account is mapped to",
+        comment="Contract template ID this policy is mapped to",
     )
 
     # Cache metadata
@@ -75,11 +81,14 @@ class AccountTemplateMapping(Base):
             "source IN ('external_api', 'manual', 'migrated')",
             name="account_template_mappings_source_check",
         ),
+        UniqueConstraint("account_number", "policy_id", name="unique_account_policy"),
         Index("idx_account_mappings_account_number", "account_number"),
+        Index("idx_account_mappings_policy_id", "policy_id"),
+        Index("idx_account_mappings_account_policy", "account_number", "policy_id"),
         Index("idx_account_mappings_template_id", "contract_template_id"),
         Index("idx_account_mappings_cached_at", "cached_at"),
         Index("idx_account_mappings_source", "source"),
     )
 
     def __repr__(self) -> str:
-        return f"<AccountTemplateMapping(account={self.account_number}, template={self.contract_template_id}, source={self.source})>"
+        return f"<AccountTemplateMapping(account={self.account_number}, policy={self.policy_id}, template={self.contract_template_id}, source={self.source})>"

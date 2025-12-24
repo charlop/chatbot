@@ -86,6 +86,76 @@ class ContractResponse(BaseModel):
     )
 
 
+class PolicySummary(BaseModel):
+    """
+    Summary of a single policy within an account.
+    Used for multi-policy account responses.
+    """
+
+    policy_id: str = Field(..., description="Policy identifier (e.g., DI_F, GAP_O)")
+    contract_id: str = Field(..., description="Contract template ID")
+    contract_type: str = Field(..., description="Policy type (GAP, VSC, etc.)")
+    template_version: str | None = Field(None, description="Template version")
+    is_active: bool = Field(True, description="Whether policy is active")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
+        json_schema_extra={
+            "examples": [
+                {
+                    "policyId": "GAP_O",
+                    "contractId": "GAP-2024-TEMPLATE-001",
+                    "contractType": "GAP",
+                    "templateVersion": "1.0",
+                    "isActive": True,
+                }
+            ]
+        },
+    )
+
+
+class MultiPolicyResponse(BaseModel):
+    """
+    Response schema for account search returning multiple policies.
+    """
+
+    account_number: str = Field(..., description="Account number searched")
+    state: str | None = Field(None, description="Account-level state/jurisdiction")
+    policies: List[PolicySummary] = Field(..., description="List of all policies for account")
+    total_policies: int = Field(..., description="Total number of policies")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
+        json_schema_extra={
+            "examples": [
+                {
+                    "accountNumber": "000000000001",
+                    "state": "CA",
+                    "policies": [
+                        {
+                            "policyId": "DI_F",
+                            "contractId": "GAP-2024-TEMPLATE-001",
+                            "contractType": "GAP",
+                            "templateVersion": "1.0",
+                            "isActive": True,
+                        },
+                        {
+                            "policyId": "GAP_O",
+                            "contractId": "GAP-2024-TEMPLATE-002",
+                            "contractType": "GAP",
+                            "templateVersion": "1.1",
+                            "isActive": True,
+                        },
+                    ],
+                    "totalPolicies": 2,
+                }
+            ]
+        },
+    )
+
+
 class ExtractedFieldResponse(BaseModel):
     """
     Response schema for a single extracted field with confidence and source.

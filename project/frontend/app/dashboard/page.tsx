@@ -28,9 +28,15 @@ export default function Dashboard() {
     setSearchValue('');
   };
 
-  const handleViewDetails = (contractId: string) => {
-    // Navigate to contract details page
-    router.push(`/contracts/${contractId}`);
+  const handleViewDetails = (contractId?: string, policyId?: string) => {
+    // Navigate to contract details page with optional policy_id query param
+    if (!contractId) return;
+
+    const url = policyId
+      ? `/contracts/${contractId}?policy=${policyId}`
+      : `/contracts/${contractId}`;
+
+    router.push(url);
   };
 
   const handleRecentSearchSelect = (accountNumber: string) => {
@@ -58,7 +64,7 @@ export default function Dashboard() {
         </div>
 
         {/* Search Section */}
-        <div className="mb-8 max-w-2xl">
+        <div className="mb-8">
           {!searchResult ? (
             <>
               <SearchBar
@@ -78,7 +84,7 @@ export default function Dashboard() {
             <SearchResults
               result={searchResult}
               onNewSearch={handleNewSearch}
-              onViewDetails={() => handleViewDetails(searchResult.contractId)}
+              onViewDetails={handleViewDetails}
             />
           )}
         </div>

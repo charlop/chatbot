@@ -3,13 +3,14 @@ Contract Template API endpoints for searching and retrieving contract templates.
 """
 
 import logging
+from typing import Union
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.schemas.requests import ContractSearchRequest
-from app.schemas.responses import ContractResponse, ErrorResponse
+from app.schemas.responses import ContractResponse, MultiPolicyResponse, ErrorResponse
 from app.services.contract_service import ContractService
 from app.services.s3_service import get_s3_service, S3ObjectNotFoundError, S3AccessDeniedError
 
@@ -20,18 +21,19 @@ router = APIRouter()
 
 @router.post(
     "/contracts/search",
-    response_model=ContractResponse,
+    response_model=Union[MultiPolicyResponse, ContractResponse],
     status_code=status.HTTP_200_OK,
     summary="Search for a contract template",
     description=(
         "Search for a contract template by account number OR template ID. "
         "Account number search uses hybrid cache strategy (Redis → DB → External API). "
-        "Returns template metadata if found, 404 if not found."
+        "Returns MultiPolicyResponse (all policies) if searching by account without policy filter. "
+        "Returns ContractResponse (single contract) if searching by contract_id or filtering by policy_id. "
+        "Returns 404 if not found."
     ),
     responses={
         200: {
-            "description": "Contract template found",
-            "model": ContractResponse,
+            "description": "Contract template(s) found - either MultiPolicyResponse or ContractResponse",
         },
         404: {
             "description": "Contract template not found",
@@ -50,12 +52,13 @@ async def search_contract(
     """
     Search for a contract template by account number or template ID.
 
-    **Account Number Search Flow (Hybrid Cache):**
+    **Account Number Search Flow (Hybrid Cache - Multi-Policy):**
     1. Check Redis cache (fast path)
     2. Check account_mappings table (DB cache)
     3. Call external API (fallback)
-    4. Cache result in Redis + DB
-    5. Fetch template details
+    4. Cache ALL policies in Redis + DB
+    5. Fetch template details for each policy
+    6. Return MultiPolicyResponse (or filter by policy_id if provided)
 
     **Template ID Search Flow:**
     1. Direct database lookup
@@ -63,10 +66,12 @@ async def search_contract(
 
     Args:
         search_request: Search request with account_number OR contract_id
+                       Optional policy_id to filter to specific policy
         db: Database session (injected)
 
     Returns:
-        ContractResponse with template metadata
+        MultiPolicyResponse if searching by account (no policy filter)
+        ContractResponse if searching by contract_id or filtered by policy_id
 
     Raises:
         HTTPException 404: If template not found

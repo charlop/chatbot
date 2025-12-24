@@ -1,22 +1,53 @@
 'use client';
 
-import { SearchContractResponse } from '@/lib/api/contracts';
+import {
+  SearchContractResponse,
+  isMultiPolicyResponse,
+  isSingleContractResponse,
+} from '@/lib/api/contracts';
 import { Button } from '@/components/ui/Button';
+import { PolicyListTable } from './PolicyListTable';
 
 export interface SearchResultsProps {
   result: SearchContractResponse;
-  onViewDetails?: () => void;
+  onViewDetails?: (contractId?: string, policyId?: string) => void;
   onNewSearch?: () => void;
 }
 
 /**
- * Display search results after finding a contract
+ * Display search results after finding a contract or multiple policies
  */
 export const SearchResults = ({
   result,
   onViewDetails,
   onNewSearch,
 }: SearchResultsProps) => {
+  // Type discrimination: render different UI based on response type
+  if (isMultiPolicyResponse(result)) {
+    // Multi-policy response: show table of all policies
+    return (
+      <PolicyListTable
+        accountNumber={result.accountNumber}
+        state={result.state}
+        policies={result.policies}
+        onPolicySelect={(contractId, policyId) => {
+          onViewDetails?.(contractId, policyId);
+        }}
+        onNewSearch={onNewSearch}
+      />
+    );
+  }
+
+  // Single contract response: show contract card
+  if (!isSingleContractResponse(result)) {
+    // This should never happen due to union type, but add defensive check
+    return (
+      <div className="w-full bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 p-6">
+        <p className="text-neutral-600 dark:text-neutral-400">Invalid response format</p>
+      </div>
+    );
+  }
+
   const getContractTypeColor = (contractType: string) => {
     const lowerType = contractType.toLowerCase();
     if (lowerType.includes('gap')) {
@@ -118,7 +149,7 @@ export const SearchResults = ({
       {/* Action Buttons */}
       <div className="flex gap-3">
         {onViewDetails && (
-          <Button onClick={onViewDetails} className="flex-1">
+          <Button onClick={() => onViewDetails(result.contractId)} className="flex-1">
             View Full Details
           </Button>
         )}

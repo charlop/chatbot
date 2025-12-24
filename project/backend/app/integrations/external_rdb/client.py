@@ -21,6 +21,7 @@ from app.integrations.external_rdb.exceptions import (
 from app.integrations.external_rdb.models import (
     ExternalRDBHealthResponse,
     ExternalRDBLookupResponse,
+    PolicyLookup,
 )
 from app.models.database import AccountTemplateMapping
 
@@ -72,14 +73,14 @@ class ExternalRDBClient:
         self, account_number: str, db_session: Optional[AsyncSession] = None
     ) -> ExternalRDBLookupResponse:
         """
-        Query external database for template ID associated with account.
+        Query external database for ALL policies associated with account.
 
         Args:
             account_number: 12-digit customer account number
             db_session: Database session (required for mock mode)
 
         Returns:
-            ExternalRDBLookupResponse with template ID
+            ExternalRDBLookupResponse with list of all policies
 
         Raises:
             ExternalRDBNotFoundError: Account not found
@@ -98,6 +99,7 @@ class ExternalRDBClient:
         MOCK: Simulate external API by querying local database.
 
         In production, this would be replaced with actual HTTP call.
+        Returns ALL policies for the account.
         """
         if not db_session:
             raise ValueError("db_session required for mock mode")
@@ -105,25 +107,33 @@ class ExternalRDBClient:
         # Simulate network delay (50-200ms)
         await asyncio.sleep(0.1)
 
-        # Query local database to simulate external API
+        # Query local database to simulate external API - get ALL policies
         result = await db_session.execute(
-            select(AccountTemplateMapping).where(
-                AccountTemplateMapping.account_number == account_number
-            )
+            select(AccountTemplateMapping)
+            .where(AccountTemplateMapping.account_number == account_number)
+            .order_by(AccountTemplateMapping.policy_id)
         )
-        mapping = result.scalar_one_or_none()
+        mappings = list(result.scalars().all())
 
-        if not mapping:
+        if not mappings:
             logger.warning(f"Account {account_number} not found in external RDB (MOCK)")
             raise ExternalRDBNotFoundError(
                 f"Account number {account_number} not found in external database"
             )
 
-        logger.info(f"MOCK: External RDB lookup: {account_number} → {mapping.contract_template_id}")
+        # Build PolicyLookup list from mappings
+        policies = [
+            PolicyLookup(
+                policy_id=mapping.policy_id, contract_template_id=mapping.contract_template_id
+            )
+            for mapping in mappings
+        ]
+
+        logger.info(f"MOCK: External RDB lookup: {account_number} → {len(policies)} policies found")
 
         return ExternalRDBLookupResponse(
-            contract_template_id=mapping.contract_template_id,
             account_number=account_number,
+            policies=policies,
             source="external_api",
         )
 
@@ -132,6 +142,14 @@ class ExternalRDBClient:
         PRODUCTION: Make actual HTTP request to external RDB API.
 
         Replace mock implementation with this when external API is available.
+        Expected response format:
+        {
+            "account_number": "000000000001",
+            "policies": [
+                {"policy_id": "DI_F", "contract_template_id": "GAP-001"},
+                {"policy_id": "GAP_O", "contract_template_id": "VSC-004"}
+            ]
+        }
         """
         try:
             response = await self.http_client.post(
@@ -143,8 +161,8 @@ class ExternalRDBClient:
 
             data = response.json()
             return ExternalRDBLookupResponse(
-                contract_template_id=data["contract_template_id"],
-                account_number=account_number,
+                account_number=data["account_number"],
+                policies=[PolicyLookup(**policy) for policy in data["policies"]],
                 source="external_api",
             )
 

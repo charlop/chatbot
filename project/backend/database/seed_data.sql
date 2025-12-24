@@ -185,6 +185,45 @@ INSERT INTO state_validation_rules (jurisdiction_id, rule_category, rule_config,
  'Texas cancellation fee limits - max $75, warn above $50');
 
 -- =============================================================================
+-- SAMPLE CONTRACTS (for multi-policy testing)
+-- =============================================================================
+
+INSERT INTO contracts (contract_id, s3_bucket, s3_key, contract_type, template_version, is_active) VALUES
+('GAP-2024-TEMPLATE-001', 'contracts-dev', 'templates/gap-001.pdf', 'GAP', '1.0', true),
+('GAP-2024-TEMPLATE-002', 'contracts-dev', 'templates/gap-002.pdf', 'GAP', '1.1', true),
+('VSC-2024-TEMPLATE-004', 'contracts-dev', 'templates/vsc-004.pdf', 'VSC', '1.0', true),
+('TIRE-2024-TEMPLATE-001', 'contracts-dev', 'templates/tire-001.pdf', 'TIRE_WHEEL', '1.0', true),
+('WARRANTY-2024-001', 'contracts-dev', 'templates/warranty-001.pdf', 'WARRANTY', '1.0', true)
+ON CONFLICT (contract_id) DO NOTHING;
+
+-- =============================================================================
+-- MULTI-POLICY ACCOUNT MAPPINGS (for testing)
+-- =============================================================================
+
+-- Account with single policy (edge case)
+INSERT INTO account_template_mappings (account_number, policy_id, contract_template_id, source) VALUES
+('000000000001', 'GAP_DEFAULT', 'GAP-2024-TEMPLATE-001', 'manual');
+
+-- Account with two policies (GAP + VSC - common case)
+INSERT INTO account_template_mappings (account_number, policy_id, contract_template_id, source) VALUES
+('000000000002', 'DI_F', 'GAP-2024-TEMPLATE-001', 'manual'),
+('000000000002', 'GAP_O', 'VSC-2024-TEMPLATE-004', 'manual');
+
+-- Account with three policies (GAP + VSC + Tire)
+INSERT INTO account_template_mappings (account_number, policy_id, contract_template_id, source) VALUES
+('000000000003', 'DI_F', 'GAP-2024-TEMPLATE-001', 'manual'),
+('000000000003', 'WARRANTY_A', 'VSC-2024-TEMPLATE-004', 'manual'),
+('000000000003', 'TIRE_W', 'TIRE-2024-TEMPLATE-001', 'manual');
+
+-- Account with five policies (stress test)
+INSERT INTO account_template_mappings (account_number, policy_id, contract_template_id, source) VALUES
+('000000000004', 'DI_F', 'GAP-2024-TEMPLATE-001', 'manual'),
+('000000000004', 'GAP_O', 'GAP-2024-TEMPLATE-002', 'manual'),
+('000000000004', 'WARRANTY_A', 'VSC-2024-TEMPLATE-004', 'manual'),
+('000000000004', 'WARRANTY_B', 'WARRANTY-2024-001', 'manual'),
+('000000000004', 'TIRE_W', 'TIRE-2024-TEMPLATE-001', 'manual');
+
+-- =============================================================================
 -- VERIFICATION QUERIES
 -- =============================================================================
 -- Uncomment to verify seed data after import
@@ -207,6 +246,12 @@ INSERT INTO state_validation_rules (jurisdiction_id, rule_category, rule_config,
 -- FROM state_validation_rules svr
 -- JOIN jurisdictions j ON svr.jurisdiction_id = j.jurisdiction_id
 -- ORDER BY j.jurisdiction_name, svr.rule_category;
+--
+-- -- Count account mappings (should show multi-policy accounts)
+-- SELECT account_number, COUNT(*) as policy_count
+-- FROM account_template_mappings
+-- GROUP BY account_number
+-- ORDER BY policy_count DESC;
 
 -- =============================================================================
 -- END OF SEED DATA
