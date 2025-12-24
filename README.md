@@ -64,8 +64,8 @@ CREATE DATABASE contract_refund_system;
 \q
 
 # Apply schema
-PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d contract_refund_system \
-  -f database/schema.sql
+docker exec -i contract-postgres psql -U postgres -d contract_refund_system \
+  < database/schema.sql
 ```
 
 #### 3. Seed Database (Optional)
@@ -76,8 +76,8 @@ cd project/backend
 uv run python scripts/seed_db.py --with-extractions
 
 # Option B: Direct SQL seeding
-PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d contract_refund_system \
-  -f database/seed_data.sql
+docker exec -i contract-postgres psql -U postgres -d contract_refund_system \
+  < database/seed_data.sql
 ```
 
 **Test Accounts** (multi-policy):
@@ -162,8 +162,10 @@ docker exec -it contract-postgres psql -U postgres -d contract_refund_system \
 
 # Reapply schema and seed data
 cd project/backend
-PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d contract_refund_system \
-  -f database/schema.sql -f database/seed_data.sql
+docker exec -i contract-postgres psql -U postgres -d contract_refund_system \
+  < database/schema.sql
+docker exec -i contract-postgres psql -U postgres -d contract_refund_system \
+  < database/seed_data.sql
 ```
 
 ### Run Tests
@@ -349,8 +351,10 @@ cd project/backend
 docker exec -it contract-postgres psql -U postgres -d contract_refund_system \
   -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d contract_refund_system \
-  -f database/schema.sql -f database/seed_data.sql
+docker exec -i contract-postgres psql -U postgres -d contract_refund_system \
+  < database/schema.sql
+docker exec -i contract-postgres psql -U postgres -d contract_refund_system \
+  < database/seed_data.sql
 ```
 
 ## Documentation
